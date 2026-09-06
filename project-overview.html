@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoterScope Demo: Tinjauan Proyek</title>
+<meta name="description" content="Tinjauan lengkap proyek VoterScope Demo: progres, arsitektur, keamanan, pengujian, dan isu yang diketahui.">
+<style>
+  /* Palet: Catppuccin Mocha (gelap) dan Latte (terang), diambil dari sistem desain
+     aplikasi VoterScope sendiri agar dokumen ini terasa milik proyek yang ditinjau. */
+  :root {
+    --bg: #1e1e2e;
+    --card: #181825;
+    --border: #313244;
+    --track: #313244;
+    --text: #cdd6f4;
+    --secondary: #a6adc8;
+    --link: #89b4fa;
+    --ok: #a6e3a1;
+    --warn: #f9e2af;
+    --bad: #f38ba8;
+    --info: #89b4fa;
+    --ok-bg: rgba(166, 227, 161, 0.12);
+    --warn-bg: rgba(249, 226, 175, 0.12);
+    --bad-bg: rgba(243, 139, 168, 0.12);
+    --info-bg: rgba(137, 180, 250, 0.12);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --bg: #eff1f5;
+      --card: #e6e9ef;
+      --border: #ccd0da;
+      --track: #d5d9e1;
+      --text: #4c4f69;
+      --secondary: #5c5f77;
+      /* Varian teks lebih gelap dari palet Latte agar memenuhi kontras WCAG AA */
+      --link: #1850c8;
+      --ok: #236b2d;
+      --warn: #7a5a10;
+      --bad: #d20f39;
+      --info: #1850c8;
+      --ok-bg: rgba(35, 107, 45, 0.10);
+      --warn-bg: rgba(122, 90, 16, 0.10);
+      --bad-bg: rgba(210, 15, 57, 0.10);
+      --info-bg: rgba(24, 80, 200, 0.10);
+    }
+  }
+  :root[data-theme="latte"] {
+    --bg: #eff1f5;
+    --card: #e6e9ef;
+    --border: #ccd0da;
+    --track: #d5d9e1;
+    --text: #4c4f69;
+    --secondary: #5c5f77;
+    --link: #1850c8;
+    --ok: #236b2d;
+    --warn: #7a5a10;
+    --bad: #d20f39;
+    --info: #1850c8;
+    --ok-bg: rgba(35, 107, 45, 0.10);
+    --warn-bg: rgba(122, 90, 16, 0.10);
+    --bad-bg: rgba(210, 15, 57, 0.10);
+    --info-bg: rgba(24, 80, 200, 0.10);
+  }
+  :root[data-theme="mocha"] {
+    --bg: #1e1e2e;
+    --card: #181825;
+    --border: #313244;
+    --track: #313244;
+    --text: #cdd6f4;
+    --secondary: #a6adc8;
+    --link: #89b4fa;
+    --ok: #a6e3a1;
+    --warn: #f9e2af;
+    --bad: #f38ba8;
+    --info: #89b4fa;
+    --ok-bg: rgba(166, 227, 161, 0.12);
+    --warn-bg: rgba(249, 226, 175, 0.12);
+    --bad-bg: rgba(243, 139, 168, 0.12);
+    --info-bg: rgba(137, 180, 250, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  a { color: var(--link); }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; border-radius: 4px; }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Masthead dokumen */
+  .masthead { padding: 44px 0 28px; border-bottom: 1px solid var(--border); }
+  .masthead-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .subtitle { margin: 0; color: var(--secondary); max-width: 46rem; }
+  .status-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--ok-bg); color: var(--ok);
+    border-radius: 6px; padding: 6px 12px; font-size: 14px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 32px;
+    margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+    font-size: 14px; color: var(--secondary);
+  }
+  .meta dt { font-size: 12.5px; margin-bottom: 2px; }
+  .meta dd { margin: 0; color: var(--text); font-weight: 500; }
+  #theme-toggle {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 16px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  #theme-toggle:hover { border-color: var(--info); }
+
+  /* Dua kolom: daftar isi menempel di kiri pada layar lebar */
+  .layout { display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 210px 1fr; gap: 56px; }
+    .toc { position: sticky; top: 32px; align-self: start; }
+  }
+  .toc { padding: 28px 0; font-size: 14px; }
+  .toc h2 { font-size: 13px; color: var(--secondary); margin: 0 0 12px; font-weight: 600; }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  @media (min-width: 1000px) { .toc ol { flex-direction: column; gap: 2px; } }
+  .toc a { text-decoration: none; display: inline-block; padding: 5px 0; }
+  .toc a:hover { text-decoration: underline; }
+
+  main { min-width: 0; }
+  section { padding: 40px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  h2 { font-size: 1.5rem; margin: 0 0 18px; letter-spacing: -0.01em; }
+  h2 .num { color: var(--secondary); font-weight: 500; margin-right: 10px; }
+  h3 { font-size: 1.05rem; margin: 24px 0 10px; }
+  p { margin: 0 0 14px; }
+  .note { font-size: 14px; color: var(--secondary); }
+  code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.88em; background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px;
+  }
+  pre {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 20px; overflow-x: auto; margin: 0 0 16px;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+
+  /* Tabel: pembungkus agar tabel lebar bisa digulir di layar sempit tanpa meluapkan halaman */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 0 0 8px; }
+  th { text-align: left; font-weight: 600; color: var(--secondary); }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--card); }
+
+  .chip {
+    display: inline-block; border-radius: 6px; padding: 2px 10px;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .chip.info { background: var(--info-bg); color: var(--info); }
+
+  /* Bilah progres */
+  .bars { display: grid; gap: 18px; margin-top: 20px; }
+  .bar-row { display: grid; grid-template-columns: minmax(130px, 190px) 1fr 52px; gap: 6px 14px; align-items: center; }
+  .bar-row .label { font-weight: 600; font-size: 14.5px; }
+  .bar-row .pct { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; font-size: 14.5px; }
+  .bar { height: 10px; background: var(--track); border-radius: 5px; overflow: hidden; grid-column: 1 / -1; }
+  .fill { height: 100%; border-radius: 5px; }
+  .fill.ok { background: var(--ok); }
+  .fill.info { background: var(--info); }
+  .fill.warn { background: var(--warn); }
+  .fill.bad { background: var(--bad); }
+  .bar-note { font-size: 13.5px; color: var(--secondary); grid-column: 1 / -1; margin-top: -8px; }
+  @media (max-width: 560px) {
+    .bar-row { grid-template-columns: 1fr 52px; }
+    .bar-row .label { grid-column: 1 / -1; }
+    .bar { grid-column: 1 / -1; }
+  }
+
+  /* Kartu keamanan: tinggi mengikuti isi, bukan kartu seragam */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 0; }
+  .card h3 { margin: 0 0 8px; font-size: 15.5px; }
+  .card p { margin: 0; font-size: 14px; color: var(--secondary); }
+  .card p strong, .card p b { color: var(--text); }
+
+  ol.steps, ol.issues { padding-left: 22px; margin: 0 0 8px; }
+  ol.steps li, ol.issues li { margin-bottom: 12px; }
+  ul.plain { padding-left: 22px; margin: 0 0 8px; }
+  ul.plain li { margin-bottom: 6px; }
+
+  .fact-strip {
+    display: flex; flex-wrap: wrap; gap: 10px 36px;
+    padding: 18px 20px; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; margin-top: 20px;
+  }
+  .fact-strip dt { font-size: 12.5px; color: var(--secondary); }
+  .fact-strip dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+  footer { padding: 36px 0 56px; font-size: 14px; color: var(--secondary); }
+  footer .fine { margin-top: 10px; font-size: 13px; }
+
+  @media print {
+    #theme-toggle, .toc { display: none; }
+    .layout { display: block; }
+    section { padding: 24px 0; }
+    pre { white-space: pre-wrap; }
+    :root, :root[data-theme="mocha"] {
+      --bg: #ffffff; --card: #f4f4f8; --border: #c9cbd6; --track: #d5d9e1;
+      --text: #24252f; --secondary: #4c4f69; --link: #1850c8;
+      --ok: #236b2d; --warn: #7a5a10; --bad: #d20f39; --info: #1850c8;
+      --ok-bg: rgba(35, 107, 45, 0.10); --warn-bg: rgba(122, 90, 16, 0.10);
+      --bad-bg: rgba(210, 15, 57, 0.10); --info-bg: rgba(24, 80, 200, 0.10);
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead-top">
+      <div>
+        <h1>VoterScope Demo</h1>
+        <p class="subtitle">Sistem informasi manajemen data pemilih administratif untuk konteks Indonesia, dibangun sebagai portofolio dengan 100% data sintetis. Dokumen ini merangkum hasil analisis kode penuh terhadap repositori.</p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:12px;">
+        <span class="status-chip"><span class="dot" aria-hidden="true"></span>Rilis demo lengkap</span>
+        <button id="theme-toggle" type="button">Ganti tema</button>
+      </div>
+    </div>
+    <dl class="meta">
+      <div><dt>Versi</dt><dd>0.1.0</dd></div>
+      <div><dt>Rilis</dt><dd>commit <code>ce1ec40</code> "initial full demo release"</dd></div>
+      <div><dt>Dianalisis</dt><dd>20 September 2026</dd></div>
+      <div><dt>Repositori</dt><dd><a href="https://github.com/zulfanzidni/VoterScope">github.com/zulfanzidni/VoterScope</a></dd></div>
+      <div><dt>Lisensi</dt><dd>MIT</dd></div>
+    </dl>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Daftar isi">
+      <h2>Daftar isi</h2>
+      <ol>
+        <li><a href="#ringkasan">Ringkasan eksekutif</a></li>
+        <li><a href="#progres">Progres</a></li>
+        <li><a href="#teknologi">Teknologi</a></li>
+        <li><a href="#arsitektur">Arsitektur</a></li>
+        <li><a href="#data">Model data</a></li>
+        <li><a href="#fitur">Matriks fitur</a></li>
+        <li><a href="#keamanan">Keamanan</a></li>
+        <li><a href="#pengujian">Pengujian dan kualitas</a></li>
+        <li><a href="#isu">Isu yang diketahui</a></li>
+        <li><a href="#rekomendasi">Rekomendasi</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section id="ringkasan">
+        <h2><span class="num" aria-hidden="true">01</span>Ringkasan eksekutif</h2>
+        <p>VoterScope Demo adalah aplikasi web full-stack untuk manajemen data pemilih pada konteks administratif Indonesia. Aplikasi ini menangani entitas khas administrasi pemilih: NIK (Nomor Induk Kependudukan), TPS (Tempat Pemungutan Suara), dan hierarki wilayah resmi Kemendagri dari tingkat provinsi sampai kelurahan. Seluruh data dibuat oleh skrip seed dan bersifat sintetis; proyek ini memang dirancang sebagai portofolio dan alat edukasi, bukan sistem produksi.</p>
+        <p>Analisis kode menemukan proyek yang sudah selesai dalam ruang lingkup demonya. Sepuluh fitur inti terpasang penuh dan terhubung ke data nyata melalui Prisma dan SQLite, tanpa satu pun handler yang di-mock saat runtime. Pencarian pada seluruh source tidak menemukan penanda TODO, FIXME, atau blok kode yang dikomentari. Fokus terkuat proyek ada di lapisan keamanan dan tata kelola: enkripsi NIK, blind indexing, RBAC hierarkis lima tingkat, serta jejak audit yang lengkap dengan ekspor kepatuhan.</p>
+        <p>Pekerjaan yang tersisa bukan fitur, melainkan kesiapan operasional. Jalur upgrade ke produksi (PostgreSQL, Redis, KMS, OAuth2/OIDC) sudah didokumentasikan di <code>docs/future-production-upgrade.md</code> tetapi belum dieksekusi. Repositori berisi dua commit, pohon kerja bersih, dan belum memiliki pipeline CI.</p>
+        <dl class="fact-strip">
+          <div><dt>Skala kode</dt><dd>±70 file TypeScript, ±12.500 baris</dd></div>
+          <div><dt>Backend</dt><dd>15 route handler API</dd></div>
+          <div><dt>Database</dt><dd>7 model Prisma di SQLite</dd></div>
+          <div><dt>Test unit</dt><dd>142 lulus, 9 suite</dd></div>
+          <div><dt>Dokumentasi</dt><dd>8 dokumen + FINAL_AUDIT.md</dd></div>
+        </dl>
+      </section>
+
+      <section id="progres">
+        <h2><span class="num" aria-hidden="true">02</span>Progres</h2>
+        <p>Ruang lingkup demo dinyatakan selesai. Persentase di bawah adalah penilaian analisis atas bukti yang tercantum pada tiap area, bukan keluaran metrik otomatis.</p>
+        <div class="bars">
+          <div class="bar-row">
+            <span class="label">Fitur inti</span>
+            <span class="pct">100%</span>
+            <div class="bar"><div class="fill ok" style="width:100%"></div></div>
+            <span class="bar-note">10 dari 10 fitur pada matriks di bawah berstatus selesai dan terhubung ke data nyata.</span>
+          </div>
+          <div class="bar-row">
+            <span class="label">Keamanan (level demo)</span>
+            <span class="pct">100%</span>
+            <div class="bar"><div class="fill ok" style="width:100%"></div></div>
+            <span class="bar-note">Seluruh mekanisme keamanan terpasang dan diuji oleh test suite; lihat bagian Keamanan.</span>
+          </div>
+          <div class="bar-row">
+            <span class="label">Pengujian</span>
+            <span class="pct">90%</span>
+            <div class="bar"><div class="fill info" style="width:90%"></div></div>
+            <span class="bar-note">142 unit test lulus dan 3 spesifikasi e2e Playwright tersedia; belum ada ambang coverage dan belum ada CI.</span>
+          </div>
+          <div class="bar-row">
+            <span class="label">Dokumentasi</span>
+            <span class="pct">100%</span>
+            <div class="bar"><div class="fill ok" style="width:100%"></div></div>
+            <span class="bar-note">8 dokumen teknis, FINAL_AUDIT.md, dan README lengkap; satu angka kedaluwarsa (jumlah test).</span>
+          </div>
+          <div class="bar-row">
+            <span class="label">Higiene kode</span>
+            <span class="pct">85%</span>
+            <div class="bar"><div class="fill warn" style="width:85%"></div></div>
+            <span class="bar-note">20 dependensi tak terpakai di package.json dan satu duplikasi logika agregasi dashboard.</span>
+          </div>
+          <div class="bar-row">
+            <span class="label">Kesiapan produksi</span>
+            <span class="pct">30%</span>
+            <div class="bar"><div class="fill bad" style="width:30%"></div></div>
+            <span class="bar-note">SQLite lokal, rate limiter in-memory, dan fallback secret dev; jalur upgrade terdokumentasi tetapi belum dieksekusi.</span>
+          </div>
+        </div>
+        <p class="note" style="margin-top:20px;">Intinya: sebagai demo portofolio proyek ini tuntas. Sebagai kandidat sistem produksi, pekerjaan terbesar ada di migrasi infrastruktur sesuai <code>docs/future-production-upgrade.md</code>.</p>
+      </section>
+
+      <section id="teknologi">
+        <h2><span class="num" aria-hidden="true">03</span>Teknologi</h2>
+        <div class="table-wrap"><table>
+          <thead>
+            <tr><th scope="col">Lapisan</th><th scope="col">Teknologi</th><th scope="col">Peran</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Framework</td><td>Next.js 16.3.4 (App Router, Turbopack)</td><td>Server components + route handlers; middleware memakai konvensi baru <code>proxy.ts</code></td></tr>
+            <tr><td>UI</td><td>React 19.2.8</td><td>Halaman server + client components untuk form, tabel, dan chart</td></tr>
+            <tr><td>Bahasa</td><td>TypeScript 5 (strict + noUncheckedIndexedAccess)</td><td>Type safety penuh lintas client dan server</td></tr>
+            <tr><td>Styling</td><td>Tailwind CSS v4 + token Catppuccin</td><td>Konfigurasi CSS-first tanpa file tailwind.config; sistem desain di <code>app/globals.css</code> (594 baris)</td></tr>
+            <tr><td>Database</td><td>SQLite + Prisma ORM 6.8.2</td><td>Database lokal tanpa konfigurasi, 1 migrasi inisial</td></tr>
+            <tr><td>Sesi</td><td>iron-session 8.0.4</td><td>Cookie http-only tersegel AES-256-GCM, TTL 8 jam</td></tr>
+            <tr><td>Sandi</td><td>argon2 0.45.1</td><td>Hash Argon2id sesuai rekomendasi OWASP</td></tr>
+            <tr><td>Kriptografi</td><td>Node.js crypto</td><td>AES-256-GCM untuk NIK dan HMAC-SHA256 untuk blind index</td></tr>
+            <tr><td>Validasi</td><td>Zod 3.24</td><td>Skema bersama untuk API dan form</td></tr>
+            <tr><td>Form</td><td>react-hook-form 7.57 + @hookform/resolvers</td><td>Form login dengan resolver zod</td></tr>
+            <tr><td>Grafik</td><td>Recharts 3.10.1</td><td>Donat gender, kohort usia, distribusi wilayah</td></tr>
+            <tr><td>Testing</td><td>Vitest 3 + Playwright 1.62</td><td>Test unit/integrasi dan e2e multi-peran</td></tr>
+          </tbody>
+        </table></div>
+        <p class="note">Tidak ada library state management: data mengalir dari server components dan fetch ke API internal. Tidak ada UI kit; seluruh komponen ditulis sendiri.</p>
+      </section>
+
+      <section id="arsitektur">
+        <h2><span class="num" aria-hidden="true">04</span>Arsitektur</h2>
+        <p>Kode berada di root repositori tanpa folder <code>src/</code>, mengikuti struktur App Router Next.js 16.</p>
+<pre><code>voterscope-demo/
+├── proxy.ts              Gerbang auth + security headers (pengganti middleware.ts)
+├── app/                  37 file: halaman App Router + 15 route handler API
+│   ├── api/              auth, voters, users, profile, territories, dashboard, audit
+│   ├── dashboard/        View terautentikasi: voters, users, audit, profile
+│   ├── login/            Form login + pemilih persona demo
+│   └── globals.css       Token desain Catppuccin (594 baris)
+├── components/           6 komponen: tabel, form, filter, chart, theme toggle
+├── lib/                  15 modul logika bisnis (±2.000 baris)
+│   ├── authorization/    RBAC hierarkis + guard anti-IDOR (319 baris)
+│   ├── security/         Enkripsi NIK + rate limiter
+│   ├── territory/        Kodewilayah + snapshot district offline (761 KB)
+│   └── validation/       Skema Zod bersama
+├── prisma/               Schema (7 model), 1 migrasi, seed 100 pemilih
+├── tests/                unit/ (9 suite Vitest) + e2e/ (3 spesifikasi Playwright)
+└── docs/                 8 dokumen teknis + 4 screenshot</code></pre>
+        <h3>Alur satu permintaan tulis (misal tambah pemilih)</h3>
+        <ol class="steps">
+          <li><code>proxy.ts</code> memeriksa sesi cookie, memblokir akses tanpa login (redirect ke <code>/login</code>), dan menambahkan security headers.</li>
+          <li>Client mengirim mutasi ke route handler di <code>app/api/</code>; payload divalidasi ulang dengan skema Zod di sisi server.</li>
+          <li>Guard RBAC memeriksa scope hierarkis; filter wilayah dari client ditimpa dengan scope resmi dari sesi, sehingga tidak bisa dilewati.</li>
+          <li>NIK dienkripsi AES-256-GCM, blind index HMAC-SHA256 dihitung untuk deteksi duplikat, dan validasi hierarki wilayah dijalankan.</li>
+          <li>Setiap operasi penting menulis baris audit (aktor, aksi, IP, user agent, hasil), lalu Prisma mengeksekusi perubahan ke SQLite.</li>
+        </ol>
+        <p class="note">Data wilayah bersifat offline-first: <code>lib/territory/</code> menyimpan snapshot 38 provinsi dan 514 kabupaten/kota plus 761 KB district pra-muat; satu-satunya kontak API eksternal terjadi saat persiapan data, bukan saat runtime.</p>
+      </section>
+
+      <section id="data">
+        <h2><span class="num" aria-hidden="true">05</span>Model data</h2>
+        <p>Tujuh model Prisma di <code>prisma/schema.prisma</code>, dipetakan ke tabel snake_case dengan indeks lengkap.</p>
+        <div class="cards">
+          <div class="card">
+            <h3>Hierarki wilayah: Province, Kabupaten, Kecamatan, Kelurahan</h3>
+            <p>Empat model dengan kode resmi Kemendagri yang unik per tingkat, saling terhubung lewat foreign key. Menyediakan 38 provinsi dan 514 kabupaten/kota, plus district pra-muat untuk mode offline.</p>
+          </div>
+          <div class="card">
+            <h3>User</h3>
+            <p>Username dan email unik, <code>passwordHash</code> Argon2id, role sebagai string dengan enam nilai yang divalidasi di lapisan aplikasi, dan empat foreign key scope wilayah opsional sesuai jabatan.</p>
+          </div>
+          <div class="card">
+            <h3>Voter</h3>
+            <p>NIK tidak pernah disimpan sebagai teks biasa: <code>nikEncrypted</code> (AES-256-GCM) plus <code>nikLookupHash</code> unik (HMAC-SHA256) sebagai blind index. Atribut demografi, TPS, status (ACTIVE, NEEDS_REVIEW, ARCHIVED), <code>archivedAt</code> untuk soft delete, relasi created/updated-by, dan sekitar 11 indeks.</p>
+          </div>
+          <div class="card">
+            <h3>AuditLog</h3>
+            <p>Aktor, aksi, tipe dan target resource, timestamp, IP, user agent, hasil, serta metadata JSON. Menjadi dasar peninjau kepatuhan dan ekspor CSV/JSON.</p>
+          </div>
+        </div>
+        <h3>Seed</h3>
+        <p><code>prisma/seed.ts</code> (390 baris) membuat 6 akun demo, satu per peran dengan sandi bersama <code>Demo@12345</code>, dan 100 pemilih sintetis memakai kode wilayah asli Jawa Barat (32, 3201, Cibinong, Karadenan). Database <code>prisma/dev.db</code> (1,2 MB) ada di lokal dan dikecualikan dari git.</p>
+      </section>
+
+      <section id="fitur">
+        <h2><span class="num" aria-hidden="true">06</span>Matriks fitur</h2>
+        <div class="table-wrap"><table>
+          <thead>
+            <tr><th scope="col">Fitur</th><th scope="col">Status</th><th scope="col">Catatan</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Login 6 persona demo</td><td><span class="chip ok">Selesai</span></td><td>Argon2id, mitigasi timing attack, rate limit 10 percobaan per 15 menit per IP</td></tr>
+            <tr><td>Dashboard ter-scope per wilayah</td><td><span class="chip ok">Selesai</span></td><td>KPI, donat gender, kohort usia, distribusi wilayah, skor kualitas data; dihitung langsung dari database sesuai scope peran</td></tr>
+            <tr><td>Direktori pemilih</td><td><span class="chip ok">Selesai</span></td><td>Pencarian nama/TPS dengan debounce, filter gender dan status, paginasi</td></tr>
+            <tr><td>Tambah pemilih</td><td><span class="chip ok">Selesai</span></td><td>NIK terenkripsi, deteksi duplikat lewat blind index, validasi hierarki wilayah</td></tr>
+            <tr><td>Detail pemilih + reveal NIK</td><td><span class="chip ok">Selesai</span></td><td>NIK tersamar secara default; dekripsi hanya via <code>?reveal=true</code> dan tercatat di audit</td></tr>
+            <tr><td>Edit dan arsip pemilih</td><td><span class="chip ok">Selesai</span></td><td>Soft delete lewat <code>archivedAt</code> dengan dialog konfirmasi</td></tr>
+            <tr><td>Manajemen user</td><td><span class="chip ok">Selesai</span></td><td>Admin hanya mengelola bawahan dalam scope; perlindungan eskalasi peran, percobaan ditolak tercatat di audit</td></tr>
+            <tr><td>Peninjau audit + ekspor</td><td><span class="chip ok">Selesai</span></td><td>Filter, modal metadata JSON, ekspor CSV/JSON (dibatasi 1.000 baris)</td></tr>
+            <tr><td>Profil dan ganti sandi</td><td><span class="chip ok">Selesai</span></td><td>Verifikasi sandi lama dengan Argon2id</td></tr>
+            <tr><td>Tema Mocha/Latte</td><td><span class="chip ok">Selesai</span></td><td>Tersimpan di localStorage, tanpa flash saat muat</td></tr>
+          </tbody>
+        </table></div>
+        <h3>Di luar ruang lingkup (diputuskan sejak awal, <code>docs/assumptions.md</code> bagian 6)</h3>
+        <ul class="plain">
+          <li>Peta sebaran, impor/ekspor data pemilih, operasi massal, ekspor PDF.</li>
+          <li>MFA/SSO, notifikasi real-time, peramalan atau analitik prediktif.</li>
+          <li>Pelacakan preferensi politik: dilarang oleh desain; aplikasi ini murni administratif.</li>
+        </ul>
+      </section>
+
+      <section id="keamanan">
+        <h2><span class="num" aria-hidden="true">07</span>Keamanan</h2>
+        <p>Keamanan adalah showcase utama proyek ini. Semua mekanisme berikut terpasang di kode, bukan hanya rencana.</p>
+        <div class="cards">
+          <div class="card">
+            <h3>Hash kata sandi</h3>
+            <p>Argon2id dengan parameter OWASP (<strong>m=65536, t=3, p=4</strong>). Saat username tidak ditemukan, verifikasi tetap dijalankan terhadap dummy hash agar waktu respons seragam dan enumerasi user sulit.</p>
+          </div>
+          <div class="card">
+            <h3>Sesi</h3>
+            <p>iron-session: cookie http-only tersegel AES-256-GCM dengan TTL 8 jam, tanpa state sesi di server. <code>proxy.ts</code> memvalidasi tiap permintaan sebelum halaman tampil.</p>
+          </div>
+          <div class="card">
+            <h3>Perlindungan NIK</h3>
+            <p>AES-256-GCM dengan IV 96-bit unik dan auth tag 128-bit. Blind index HMAC-SHA256 memungkinkan deteksi duplikat tanpa dekripsi. NIK tampil tersamar (<strong>3201************</strong>) secara default; dekripsi dilakukan saat diminta dan selalu tercatat di audit.</p>
+          </div>
+          <div class="card">
+            <h3>RBAC hierarkis 5 tingkat</h3>
+            <p>Nasional, Provinsi, Kabupaten, Kecamatan, Kelurahan. Server menimpa filter client dengan scope resmi; guard anti-IDOR memeriksa eskalasi horizontal dan vertikal, dan percobaan dicatat sebagai <code>ACCESS_DENIED</code> atau <code>IDOR_ATTEMPT_SCOPE_MISMATCH</code>.</p>
+          </div>
+          <div class="card">
+            <h3>Anti-penyalahgunaan</h3>
+            <p>Rate limiter sliding-window: login 10 percobaan per 15 menit per IP, lookup NIK 20 permintaan per menit. Implementasi in-memory dan memang hanya untuk satu proses (lihat isu nomor 3).</p>
+          </div>
+          <div class="card">
+            <h3>Header dan jejak audit</h3>
+            <p>CSP ketat, <strong>X-Frame-Options: DENY</strong>, proteksi MIME-sniffing. Audit log menangkap aktor, IP, user agent, aksi, target, hasil, dan metadata JSON untuk semua operasi penting.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="pengujian">
+        <h2><span class="num" aria-hidden="true">08</span>Pengujian dan kualitas</h2>
+        <p>Suite unit dijalankan ulang saat analisis ini ditulis (20 September 2026) dan hasilnya: <strong>9 file test, 142 test, semuanya lulus</strong> dalam 7,4 detik.</p>
+        <div class="table-wrap"><table>
+          <thead>
+            <tr><th scope="col">Suite</th><th scope="col">Jumlah test</th><th scope="col">Cakupan</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>authorization.test.ts</code></td><td>26</td><td>RBAC hierarkis, guard anti-IDOR, eskalasi peran</td></tr>
+            <tr><td><code>voter-crud.test.ts</code></td><td>23</td><td>CRUD pemilih, enkripsi NIK, deteksi duplikat</td></tr>
+            <tr><td><code>auth.test.ts</code></td><td>19</td><td>Login, sesi, mitigasi enumerasi</td></tr>
+            <tr><td><code>user-management.test.ts</code></td><td>18</td><td>Manajemen user, anti-eskalasi</td></tr>
+            <tr><td><code>profile.test.ts</code></td><td>14</td><td>Profil dan ganti sandi</td></tr>
+            <tr><td><code>kodewilayah.test.ts</code></td><td>13</td><td>Layanan wilayah Indonesia, ketahanan kode tak dikenal</td></tr>
+            <tr><td><code>audit-log.test.ts</code></td><td>12</td><td>Penulisan dan peninjauan jejak audit</td></tr>
+            <tr><td><code>nik.test.ts</code></td><td>10</td><td>Enkripsi, blind index, penyamaran</td></tr>
+            <tr><td><code>dashboard-stats.test.ts</code></td><td>7</td><td>Agregasi demografi ter-scope</td></tr>
+          </tbody>
+        </table></div>
+        <p>Untuk e2e tersedia 3 spesifikasi Playwright (<code>login</code>, <code>voters</code>, <code>audit-and-users</code>) yang menargetkan chromium dan otomatis menjalankan dev server. Quality gate yang bisa dijalankan: <code>npm run lint</code>, <code>npm run format:check</code>, <code>npm run test</code>, <code>npm run build</code>, dan <code>npm run test:e2e</code>.</p>
+        <p><span class="chip warn">Kedaluwarsa</span>&nbsp; FINAL_AUDIT.md (ditandai terverifikasi 5 September 2026) masih menulis "123 tests" pada empat tempat. Angka aktual saat analisis adalah 142, sesuai klaim README. Dokumen audit perlu disegarkan.</p>
+      </section>
+
+      <section id="isu">
+        <h2><span class="num" aria-hidden="true">09</span>Isu yang diketahui</h2>
+        <p>Daftar temuan analisis, diurutkan dari yang paling berdampak. Semua referensi file sudah diverifikasi langsung.</p>
+        <ol class="issues">
+          <li><strong>20 dependensi tak terpakai</strong> di <code>package.json</code>: 14 paket <code>@radix-ui/react-*</code>, plus <code>lucide-react</code>, <code>jose</code>, <code>nanoid</code>, <code>date-fns</code>, <code>class-variance-authority</code>, dan devDep <code>@types/better-sqlite3</code>. Tidak berdampak ke runtime, tetapi memperlambat instalasi dan menyesatkan pembaca audit.</li>
+          <li><strong>Fallback secret hardcode</strong> saat env hilang: <code>proxy.ts:16</code> dan <code>lib/auth/session.ts:19</code> memakai sandi sesi dev; <code>prisma/seed.ts:28-32</code> menetapkan kunci NIK dev. Wajar untuk demo lokal, berbahaya jika pola ini terbawa ke produksi.</li>
+          <li><strong>Rate limiter in-memory</strong> (<code>lib/security/rate-limit.ts</code>) hanya berlaku per proses; produksi butuh penyimpanan bersama seperti Redis.</li>
+          <li><strong>Ekspor audit dibatasi 1.000 baris</strong> dan tidak mengikuti filter aktif di peninjau, sehingga hasil ekspor bisa berbeda dari yang dilihat peninjaunya.</li>
+          <li><strong>Duplikasi logika agregasi dashboard</strong> antara <code>app/dashboard/page.tsx</code> dan <code>app/api/dashboard/stats/route.ts</code>; perubahan rumus harus dilakukan di dua tempat.</li>
+          <li><strong>Error diam-diam di direktori pemilih</strong>: <code>app/dashboard/voters/VotersClient.tsx:55</code> hanya memanggil <code>console.error</code> saat fetch gagal, sehingga tabel tampak kosong tanpa pesan kesalahan.</li>
+          <li><strong>Latar not-found hardcode gelap</strong>: <code>app/not-found.tsx:7</code> memakai <code>hsl(222 47% 6%)</code> dan mengabaikan tema Latte.</li>
+          <li><strong>CSP masih longgar</strong>: <code>proxy.ts:105</code> mengizinkan <code>'unsafe-inline'</code> dan <code>'unsafe-eval'</code> untuk script; dipahami sebagai kebutuhan Next dev, tetapi perlu diperketat untuk produksi.</li>
+          <li><strong>Tidak ada CI</strong> (folder <code>.github/</code> tidak ada); klaim kualitas di README hanya bisa diverifikasi manual.</li>
+          <li><strong>Angka test di FINAL_AUDIT.md kedaluwarsa</strong> (123, aktual 142); lihat bagian Pengujian.</li>
+        </ol>
+      </section>
+
+      <section id="rekomendasi">
+        <h2><span class="num" aria-hidden="true">10</span>Rekomendasi</h2>
+        <ol class="steps">
+          <li><strong>Bersihkan dependensi mati.</strong> Hapus 20 paket tak terpakai, lalu jalankan ulang build dan test untuk memastikan tidak ada impor tersembunyi.</li>
+          <li><strong>Tambahkan CI minimal.</strong> GitHub Actions dengan lint, typecheck, vitest, dan build pada tiap push; murah dan langsung menaikkan kredibilitas portofolio.</li>
+          <li><strong>Perbaiki dua isu UX kecil.</strong> Banner kesalahan pada VotersClient dan latar not-found yang mengikuti tema aktif.</li>
+          <li><strong>Segarkan FINAL_AUDIT.md.</strong> Perbarui angka test dan tanggal verifikasi agar dokumen audit konsisten dengan kenyataan.</li>
+          <li><strong>Selaraskan ekspor audit.</strong> Terapkan filter aktif peninjau pada ekspor, atau tampilkan batas 1.000 baris secara eksplisit di UI.</li>
+          <li><strong>Jika menuju produksi:</strong> eksekusi <code>docs/future-production-upgrade.md</code> secara bertahap, yaitu PostgreSQL, Redis untuk rate limit, KMS untuk kunci NIK, OAuth2/OIDC, pengerasan CSP, dan ambang coverage di Vitest.</li>
+        </ol>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <div class="fact-strip">
+      <div><dt>File TS/TSX</dt><dd>±70</dd></div>
+      <div><dt>Baris kode</dt><dd>±12.500</dd></div>
+      <div><dt>Route handler</dt><dd>15</dd></div>
+      <div><dt>Model Prisma</dt><dd>7</dd></div>
+      <div><dt>Test unit</dt><dd>142</dd></div>
+      <div><dt>Spesifikasi e2e</dt><dd>3</dd></div>
+      <div><dt>Commit</dt><dd>2</dd></div>
+    </div>
+    <p class="fine">Disusun dari analisis statis kode dan eksekusi langsung test suite pada 20 September 2026. Semua angka bersumber dari repositori ini; persentase progres adalah penilaian analisis yang buktinya tercantum di tiap bagian.</p>
+  </footer>
+
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var btn = document.getElementById("theme-toggle");
+  function systemTheme() {
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "latte" : "mocha";
+  }
+  function currentTheme() {
+    var t = root.getAttribute("data-theme");
+    return t === "latte" || t === "mocha" ? t : systemTheme();
+  }
+  function label() {
+    var t = currentTheme();
+    btn.textContent = t === "mocha" ? "Mode terang" : "Mode gelap";
+    btn.setAttribute("aria-label", "Ganti tema. Tema aktif: " + (t === "mocha" ? "gelap" : "terang"));
+  }
+  var stored = null;
+  try { stored = localStorage.getItem("overview-theme"); } catch (e) {}
+  if (stored === "latte" || stored === "mocha") root.setAttribute("data-theme", stored);
+  btn.addEventListener("click", function () {
+    var next = currentTheme() === "mocha" ? "latte" : "mocha";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("overview-theme", next); } catch (e) {}
+    label();
+  });
+  label();
+})();
+</script>
+</body>
+</html>

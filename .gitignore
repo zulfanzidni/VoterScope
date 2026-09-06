@@ -1,41 +1,118 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Testing and Coverage
+coverage/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
 
-# testing
-/coverage
+# Next.js Build Output
+.next/
+out/
+build/
+dist/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# Operating System & Temporary Files
 .DS_Store
-*.pem
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+*.stackdump
+*.tmp
+*.bak
+*.orig
+*~
+*.swp
+*.swo
 
-# debug
+# Certificates & Keys
+*.pem
+*.key
+*.cert
+
+# Runtime Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Environment Variables (Never commit secrets)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+.env.bak
+!.env.example
 
-# vercel
+# Local SQLite Database Files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+prisma/dev.db
+prisma/dev.db-journal
+prisma/dev.db-shm
+prisma/dev.db-wal
+
+# Vercel Deployment
 .vercel
 
-# typescript
+# TypeScript & Build Caches
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE & Editor Configurations
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# AI Agents, Assistant Prompts, Rules & Skills
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.agents/
+.gemini/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.cline/
+.roomodes
+.copilot/
+.github/copilot-instructions.md
+skills/
+prompts/
+scratch/
+.scratchpad/
+*.prompt
+*.prompt.md
+*.agent.md
+.ai/
+ai-rules/
+agent-rules/
+chat/
+transcripts/
+*.chat
+*.transcript
+.tempmediaStorage/
+.system_generated/

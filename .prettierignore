@@ -1,0 +1,9 @@
+node_modules
+.next
+build
+dist
+coverage
+playwright-report
+test-results
+*.db
+*.db-journal

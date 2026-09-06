@@ -1,0 +1,215 @@
+// VoterScope Demo — Prisma Schema
+// ALL DATA IN THIS SCHEMA IS SYNTHETIC DEMO DATA.
+// This application is a portfolio/demo system and is NOT for production use with real voter data.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMINISTRATIVE HIERARCHY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Province {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kabupaten Kabupaten[]
+  users     User[]
+  voters    Voter[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("provinces")
+}
+
+model Kabupaten {
+  id         String   @id @default(cuid())
+  provinceId String
+  code       String   @unique
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  province  Province    @relation(fields: [provinceId], references: [id])
+  kecamatan Kecamatan[]
+  users     User[]
+  voters    Voter[]
+
+  @@index([provinceId])
+  @@index([code])
+  @@index([isActive])
+  @@map("kabupaten")
+}
+
+model Kecamatan {
+  id          String   @id @default(cuid())
+  kabupatenId String
+  code        String   @unique
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  kabupaten Kabupaten  @relation(fields: [kabupatenId], references: [id])
+  kelurahan Kelurahan[]
+  users     User[]
+  voters    Voter[]
+
+  @@index([kabupatenId])
+  @@index([code])
+  @@index([isActive])
+  @@map("kecamatan")
+}
+
+model Kelurahan {
+  id          String   @id @default(cuid())
+  kecamatanId String
+  code        String   @unique
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  kecamatan Kecamatan @relation(fields: [kecamatanId], references: [id])
+  users     User[]
+  voters    Voter[]
+
+  @@index([kecamatanId])
+  @@index([code])
+  @@index([isActive])
+  @@map("kelurahan")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  fullName     String
+  passwordHash String
+  role         String   // UserRole enum — enforced in application layer
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Hierarchical scope — nullable; interpreted based on role
+  provinceId   String?
+  kabupatenId  String?
+  kecamatanId  String?
+  kelurahanId  String?
+
+  province  Province?  @relation(fields: [provinceId], references: [id])
+  kabupaten Kabupaten? @relation(fields: [kabupatenId], references: [id])
+  kecamatan Kecamatan? @relation(fields: [kecamatanId], references: [id])
+  kelurahan Kelurahan? @relation(fields: [kelurahanId], references: [id])
+
+  auditLogs     AuditLog[]
+  votersCreated Voter[]    @relation("VoterCreatedBy")
+  votersUpdated Voter[]    @relation("VoterUpdatedBy")
+
+  @@index([username])
+  @@index([email])
+  @@index([role])
+  @@index([provinceId])
+  @@index([kabupatenId])
+  @@index([kecamatanId])
+  @@index([kelurahanId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VOTERS — ALL DATA IS SYNTHETIC DEMO DATA
+// ALL IDENTIFIER VALUES ARE SYNTHETIC DEMO DATA.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Voter {
+  id             String    @id @default(cuid())
+  // NIK is NEVER stored as plaintext
+  nikEncrypted   String    // AES-256-GCM encrypted synthetic NIK
+  nikLookupHash  String    @unique // HMAC-SHA256 for duplicate detection — deterministic
+  fullName       String
+  placeOfBirth   String
+  dateOfBirth    DateTime
+  gender         String    // Gender enum
+  address        String
+  religion       String    // Religion enum
+  maritalStatus  String    // MaritalStatus enum
+  occupation     String
+  citizenship    String    @default("WNI")
+  validUntil     DateTime?
+  tps            String
+  status         String    @default("ACTIVE") // VoterStatus enum
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
+
+  // Administrative scope
+  provinceId   String
+  kabupatenId  String
+  kecamatanId  String
+  kelurahanId  String
+
+  province  Province  @relation(fields: [provinceId], references: [id])
+  kabupaten Kabupaten @relation(fields: [kabupatenId], references: [id])
+  kecamatan Kecamatan @relation(fields: [kecamatanId], references: [id])
+  kelurahan Kelurahan @relation(fields: [kelurahanId], references: [id])
+
+  // Audit trail
+  createdBy   String?
+  updatedBy   String?
+  createdByUser User? @relation("VoterCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User? @relation("VoterUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@index([provinceId])
+  @@index([kabupatenId])
+  @@index([kecamatanId])
+  @@index([kelurahanId])
+  @@index([status])
+  @@index([gender])
+  @@index([dateOfBirth])
+  @@index([tps])
+  @@index([nikLookupHash])
+  @@index([fullName])
+  @@index([archivedAt])
+  @@map("voters")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  action       String   // AuditAction enum
+  resourceType String   // AuditResourceType enum
+  resourceId   String?
+  timestamp    DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+  result       String   @default("SUCCESS") // AuditResult enum
+  metadata     String?  // JSON string — never contains passwords, NIK, or secrets
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType])
+  @@index([timestamp])
+  @@index([result])
+  @@map("audit_logs")
+}
