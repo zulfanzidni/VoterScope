@@ -25,6 +25,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
     "@prisma/client": "^6.8.2",
+    "@vercel/analytics": "^2.0.1",
     "argon2": "^0.45.1",
     "clsx": "^2.1.1",
     "iron-session": "^8.0.4",
