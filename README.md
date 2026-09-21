@@ -9,7 +9,7 @@
 
 ## Overview
 
-VoterScope Demo is a full-stack, local-first administrative voter data management application built with Next.js 16 (App Router), TypeScript, Prisma ORM, and SQLite.
+VoterScope Demo is a full-stack administrative voter data management application built with Next.js 16 (App Router), TypeScript, Prisma ORM, and Supabase PostgreSQL 17.
 
 The project demonstrates secure enterprise software architecture, multi-tier hierarchical authorization, cryptographic personal data protection, immutable compliance audit trails, and official administrative region integrations.
 

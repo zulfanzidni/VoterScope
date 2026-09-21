@@ -1,6 +1,6 @@
 # VoterScope Demo — Final Engineering, Security & Architectural Audit
 
-**Document Version:** 1.2.0  
+**Document Version:** 1.3.0  
 **Audit Date:** 2026-09-21  
 **System Status:** **PASSED ALL QUALITY GATES (PRODUCTION DEMO READY)**  
 **Author:** Senior Full-Stack, Security, and Architectural Review Team  
@@ -47,18 +47,18 @@ The entire application runs **locally and for free** without dependencies on ext
                            │ • Prisma ORM (Type-Safe Query Client)      │
                            └───────────────────────────┬────────────────┘
                                                        │
-                                          ┌────────────┴───────────┐
-                                          │   SQLite (Local DB)    │
-                                          │   prisma/dev.db        │
-                                          └────────────────────────┘
+                                           ┌────────────┴───────────────────────────┐
+                                           │  Supabase PostgreSQL 17 (Cloud DB)     │
+                                           │  Supavisor Pooling (Port 6543 / 5432)  │
+                                           └────────────────────────────────────────┘
 ```
 
 ### Core Technologies
 | Domain | Technology | Specification / Configuration |
 |---|---|---|
-| **Framework** | Next.js 16.3.4 (App Router) | Turbopack compilation, React 19.2.8 |
+| **Framework** | Next.js 16.3.5 (App Router) | Turbopack compilation, React 19.3.0 |
 | **Language** | TypeScript 5 (Strict Mode) | `noImplicitAny: true`, `strict: true` |
-| **Database** | SQLite + Prisma 6.8.2 | Foreign key cascades, compound indices, local `dev.db` |
+| **Database** | Supabase PostgreSQL 17 + Prisma 6.8.2 | Supavisor pooler (`DATABASE_URL` / `DIRECT_URL`), RLS enabled, FK indexing |
 | **Styling** | Vanilla CSS + Design System | Custom dark theme, glassmorphic panels, CSS variables |
 | **Authentication** | `iron-session` (v8.0.4) | Encrypted HTTP-only cookies, 8-hour session TTL |
 | **Hashing** | `argon2` (v0.45.1) | Argon2id (`m=65536, t=3, p=4`), OWASP compliant |
@@ -230,8 +230,9 @@ The **VoterScope Demo** system satisfies all functional, architectural, security
 | Hierarchical RBAC & Anti-IDOR Enforcement | **VERIFIED** | 2026-09-20 |
 | Cryptographic Protection (AES-256, HMAC, Argon2id) | **VERIFIED** | 2026-09-20 |
 | Automated Test Coverage (142 Tests Passed) | **VERIFIED** | 2026-09-20 |
-| ESLint & TypeScript Compilation (0 Errors) | **VERIFIED** | 2026-09-20 |
+| ESLint & TypeScript Compilation (0 Errors) | **VERIFIED** | 2026-09-21 |
 | Automated CI/CD Pipeline & Dependabot | **VERIFIED** | 2026-09-21 |
+| Supabase PostgreSQL 17 Cloud Migration (RLS & Pooler) | **VERIFIED** | 2026-09-21 |
 | Technical Documentation & Evaluator Walkthrough | **VERIFIED** | 2026-09-20 |
 
 **Audit Conclusion: APPROVED AND READY FOR DEMO PRESENTATION.**
