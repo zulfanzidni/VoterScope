@@ -42,7 +42,7 @@
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^5.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "prettier": "^3.9.8",
