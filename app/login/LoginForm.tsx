@@ -114,7 +114,7 @@ export function LoginForm() {
               type="text"
               autoComplete="username"
               autoFocus
-              className={`input-field pl-9 text-sm ${errors.username ? "error" : ""}`}
+              className={`input-field has-icon-left !pl-10 text-sm ${errors.username ? "error" : ""}`}
               placeholder="Contoh: superadmin"
               disabled={isLoading}
               {...register("username")}
@@ -143,7 +143,7 @@ export function LoginForm() {
               id="login-password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              className={`input-field pl-9 pr-10 text-sm ${errors.password ? "error" : ""}`}
+              className={`input-field has-icon-left has-icon-right !pl-10 !pr-10 text-sm ${errors.password ? "error" : ""}`}
               placeholder="Masukkan kata sandi"
               disabled={isLoading}
               {...register("password")}

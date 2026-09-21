@@ -349,6 +349,16 @@ body {
   box-shadow: 0 0 0 2px rgba(243, 139, 168, 0.25);
 }
 
+.input-field.has-icon-left,
+.input-field.input-icon-left {
+  padding-left: 2.5rem !important;
+}
+
+.input-field.has-icon-right,
+.input-field.input-icon-right {
+  padding-right: 2.5rem !important;
+}
+
 .input-field:disabled {
   opacity: 0.6;
   cursor: not-allowed;

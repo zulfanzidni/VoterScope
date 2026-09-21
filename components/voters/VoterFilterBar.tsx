@@ -44,7 +44,7 @@ export function VoterFilterBar({ filters, onChange, onReset, totalResults }: Pro
             placeholder="Cari nama pemilih atau nomor TPS..."
             value={filters.q}
             onChange={(e) => onChange({ ...filters, q: e.target.value })}
-            className="input-field pl-9 text-sm"
+            className="input-field has-icon-left !pl-10 text-sm"
           />
         </div>
 
