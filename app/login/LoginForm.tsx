@@ -63,10 +63,16 @@ export function LoginForm() {
         router.push("/dashboard");
         router.refresh();
       } else {
-        const json = (await res.json()) as { error?: { message?: string } };
-        setServerError(
-          json?.error?.message ?? "Kredensial tidak valid. Silakan coba lagi."
-        );
+        let errorMessage = "Kredensial tidak valid. Silakan coba lagi.";
+        try {
+          const json = (await res.json()) as { error?: { message?: string } };
+          if (json?.error?.message) {
+            errorMessage = json.error.message;
+          }
+        } catch {
+          errorMessage = `Server merespons dengan status error ${res.status}. Pastikan database dan environment variables di hosting sudah terpasang.`;
+        }
+        setServerError(errorMessage);
       }
     } catch {
       setServerError("Gagal terhubung ke server. Periksa koneksi jaringan Anda.");

@@ -64,119 +64,133 @@ export async function POST(request: NextRequest) {
 
   const { username, password } = parseResult.data;
 
-  // Lookup user
-  const user = await prisma.user.findUnique({
-    where: { username },
-    select: {
-      id: true,
-      username: true,
-      email: true,
-      fullName: true,
-      role: true,
-      isActive: true,
-      passwordHash: true,
-      provinceId: true,
-      kabupatenId: true,
-      kecamatanId: true,
-      kelurahanId: true,
-    },
-  });
-
-  // Generic error — don't leak whether username exists
-  const GENERIC_ERROR = NextResponse.json(
-    {
-      error: {
-        code: "INVALID_CREDENTIALS",
-        message: "Username atau password salah.",
+  try {
+    // Lookup user
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isActive: true,
+        passwordHash: true,
+        provinceId: true,
+        kabupatenId: true,
+        kecamatanId: true,
+        kelurahanId: true,
       },
-    },
-    { status: 401 }
-  );
+    });
 
-  if (!user || !user.isActive) {
-    // Still run hash comparison to prevent timing attacks
-    await argon2.hash("dummy-password-timing-prevention");
+    // Generic error — don't leak whether username exists
+    const GENERIC_ERROR = NextResponse.json(
+      {
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Username atau password salah.",
+        },
+      },
+      { status: 401 }
+    );
+
+    if (!user || !user.isActive) {
+      // Still run hash comparison to prevent timing attacks
+      await argon2.hash("dummy-password-timing-prevention");
+      await createAuditLog({
+        userId: null,
+        action: "LOGIN_FAILED",
+        resourceType: "AUTH",
+        resourceId: null,
+        result: "FAILURE",
+        ipAddress: ip,
+        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+        metadata: { reason: user ? "ACCOUNT_INACTIVE" : "USER_NOT_FOUND", username },
+      });
+      return GENERIC_ERROR;
+    }
+
+    // Verify password with Argon2id
+    let passwordValid: boolean;
+    try {
+      passwordValid = await argon2.verify(user.passwordHash, password);
+    } catch {
+      return NextResponse.json(
+        { error: { code: "SERVER_ERROR", message: "Terjadi kesalahan pada verifikasi kata sandi." } },
+        { status: 500 }
+      );
+    }
+
+    if (!passwordValid) {
+      await createAuditLog({
+        userId: user.id,
+        action: "LOGIN_FAILED",
+        resourceType: "AUTH",
+        resourceId: null,
+        result: "FAILURE",
+        ipAddress: ip,
+        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+        metadata: { reason: "WRONG_PASSWORD" },
+      });
+      return GENERIC_ERROR;
+    }
+
+    // Build session user (NO passwordHash)
+    const sessionUser: SessionUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role as SessionUser["role"],
+      provinceId: user.provinceId,
+      kabupatenId: user.kabupatenId,
+      kecamatanId: user.kecamatanId,
+      kelurahanId: user.kelurahanId,
+    };
+
+    // Create session
+    const response = NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: sessionUser.id,
+          username: sessionUser.username,
+          fullName: sessionUser.fullName,
+          role: sessionUser.role,
+        },
+      },
+      { status: 200 }
+    );
+
+    const session = await getSession();
+    session.isLoggedIn = true;
+    session.user = sessionUser;
+    await session.save();
+
+    // Audit log — SUCCESS
     await createAuditLog({
-      userId: null,
-      action: "LOGIN_FAILED",
+      userId: user.id,
+      action: "LOGIN",
       resourceType: "AUTH",
       resourceId: null,
-      result: "FAILURE",
+      result: "SUCCESS",
       ipAddress: ip,
       userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-      metadata: { reason: user ? "ACCOUNT_INACTIVE" : "USER_NOT_FOUND", username },
+      metadata: { role: user.role },
     });
-    return GENERIC_ERROR;
-  }
 
-  // Verify password with Argon2id
-  let passwordValid: boolean;
-  try {
-    passwordValid = await argon2.verify(user.passwordHash, password);
-  } catch {
+    return response;
+  } catch (err) {
+    console.error("[LOGIN_ERROR]", err);
     return NextResponse.json(
-      { error: { code: "SERVER_ERROR", message: "Terjadi kesalahan server." } },
+      {
+        error: {
+          code: "SERVER_ERROR",
+          message:
+            "Terjadi kesalahan pada server atau database. Pastikan konfigurasi environment variables (DATABASE_URL) telah terpasang dengan benar di hosting.",
+        },
+      },
       { status: 500 }
     );
   }
-
-  if (!passwordValid) {
-    await createAuditLog({
-      userId: user.id,
-      action: "LOGIN_FAILED",
-      resourceType: "AUTH",
-      resourceId: null,
-      result: "FAILURE",
-      ipAddress: ip,
-      userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-      metadata: { reason: "WRONG_PASSWORD" },
-    });
-    return GENERIC_ERROR;
-  }
-
-  // Build session user (NO passwordHash)
-  const sessionUser: SessionUser = {
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    fullName: user.fullName,
-    role: user.role as SessionUser["role"],
-    provinceId: user.provinceId,
-    kabupatenId: user.kabupatenId,
-    kecamatanId: user.kecamatanId,
-    kelurahanId: user.kelurahanId,
-  };
-
-  // Create session
-  const response = NextResponse.json(
-    {
-      success: true,
-      user: {
-        id: sessionUser.id,
-        username: sessionUser.username,
-        fullName: sessionUser.fullName,
-        role: sessionUser.role,
-      },
-    },
-    { status: 200 }
-  );
-
-  const session = await getSession();
-  session.isLoggedIn = true;
-  session.user = sessionUser;
-  await session.save();
-
-  // Audit log — SUCCESS
-  await createAuditLog({
-    userId: user.id,
-    action: "LOGIN",
-    resourceType: "AUTH",
-    resourceId: null,
-    result: "SUCCESS",
-    ipAddress: ip,
-    userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-    metadata: { role: user.role },
-  });
-
-  return response;
 }
