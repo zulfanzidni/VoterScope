@@ -51,7 +51,7 @@
     "tsx": "^4.23.13",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.1"
   },
   "allowScripts": {
     "argon2@0.45.1": true,
