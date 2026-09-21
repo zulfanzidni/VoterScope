@@ -43,7 +43,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.3.5",
     "prettier": "^3.9.8",
     "prettier-plugin-tailwindcss": "^0.8.1",
