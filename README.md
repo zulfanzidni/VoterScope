@@ -1,5 +1,7 @@
 # VoterScope Demo
 
+[![CI Pipeline](https://github.com/zulfanzidni/VoterScope/actions/workflows/ci.yml/badge.svg)](https://github.com/zulfanzidni/VoterScope/actions/workflows/ci.yml)
+
 > **Compliance Notice**  
 > This application is an educational and portfolio demonstration system using 100% synthetic, fabricated data. It is not designed or approved for processing real personal identity data. The application strictly functions as an administrative data management system and contains no political profiling, party preference classification, persuasion workflows, or electoral campaign targeting mechanisms.
 
@@ -166,7 +168,22 @@ voterscope-demo/
 
 ## Verification & Quality Gates
 
-The codebase adheres to strict quality and security standards. Run the following commands to execute test suites and quality gates:
+The codebase adheres to strict quality and security standards enforced locally and via automated GitHub Actions CI.
+
+### Continuous Integration Pipeline (GitHub Actions)
+
+Every pull request and push to `main` triggers our hardened CI workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
+| Stage | Job Name | Tasks & Quality Checks | Artifact Retention |
+|---|---|---|---|
+| **1. Quality** | `quality` | ESLint 9 code audit, TypeScript strict type check (`tsc --noEmit`) | — |
+| **2. Test** | `unit-tests` | Prisma generation, Vitest unit & integration tests (`142` tests across `9` suites) | Coverage report (14 days) |
+| **3. Build** | `build` | Next.js 16 production Turbopack compilation | — |
+| **4. E2E** | `e2e` | SQLite schema migration, seed execution, Playwright Chromium test suites | Playwright report (on failure) |
+
+Automated weekly dependency vulnerability scans and update PRs are managed by [Dependabot](.github/dependabot.yml).
+
+### Local Execution
 
 ```bash
 # Run unit and integration tests (142 tests across 9 suites)

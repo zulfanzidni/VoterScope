@@ -123,7 +123,7 @@ export function DashboardShell({ user, children }: Props) {
     }
   };
 
-  const initials = user.fullName
+  const initials = (user?.fullName || user?.username || "U")
     .split(" ")
     .map((n) => n[0])
     .slice(0, 2)

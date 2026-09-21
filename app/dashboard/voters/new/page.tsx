@@ -20,7 +20,22 @@ export default async function NewVoterPage() {
   }
 
   if (!canPerformVoterAction(user, "create")) {
-    redirect("/dashboard/voters");
+    return (
+      <div className="card p-8 max-w-lg mx-auto text-center space-y-4 my-12 border-status-error/30 animate-in fade-in">
+        <div className="w-12 h-12 rounded-full bg-status-error/15 text-status-error flex items-center justify-center mx-auto text-2xl">
+          🚫
+        </div>
+        <h2 className="text-xl font-bold text-primary">Akses Terbatas</h2>
+        <p className="text-xs text-secondary leading-relaxed">
+          Akun Anda memiliki peran <strong>{user.role}</strong> (read-only) dan tidak memiliki wewenang untuk mendaftarkan pemilih baru.
+        </p>
+        <div className="pt-2">
+          <Link href="/dashboard/voters" className="btn btn-secondary btn-sm">
+            ‹ Kembali ke Daftar Pemilih
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

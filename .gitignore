@@ -116,3 +116,5 @@ transcripts/
 *.transcript
 .tempmediaStorage/
 .system_generated/
+.gitignore
+.zcode/
