@@ -295,6 +295,7 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
                     fontSize={11}
                     width={90}
                     tickLine={false}
+                    tickFormatter={(val: string) => (val && val.length > 12 ? `${val.slice(0, 11)}…` : val)}
                   />
                   <Tooltip content={<CustomChartTooltip />} />
                   <Bar

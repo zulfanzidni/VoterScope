@@ -217,11 +217,11 @@ export function VoterDetailClient({ voter, user }: Props) {
             </div>
             <div className="text-xl sm:text-2xl font-mono tabular-nums font-semibold text-blue-400 tracking-wide break-all sm:break-normal">
               {revealedNik ? (
-                <span className="text-emerald-400 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 rounded border border-emerald-500/20 font-mono inline-block">
+                <span id="revealed-nik" className="text-emerald-400 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 rounded border border-emerald-500/20 font-mono inline-block">
                   {revealedNik}
                 </span>
               ) : (
-                voter.nikMasked
+                <span id="masked-nik">{voter.nikMasked}</span>
               )}
             </div>
             <p className="text-[11px] text-muted">
@@ -230,6 +230,7 @@ export function VoterDetailClient({ voter, user }: Props) {
           </div>
 
           <button
+            id="toggle-nik-btn"
             type="button"
             onClick={handleToggleReveal}
             disabled={revealing}

@@ -212,9 +212,10 @@ export function DashboardShell({ user, children }: Props) {
       {/* Mobile Off-Canvas Drawer (only on < md) */}
       <aside
         id="mobile-drawer"
+        aria-hidden={!mobileOpen}
         className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] shadow-2xl md:hidden flex flex-col transition-transform duration-200 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
-        }`}
+        } ${!mobileOpen ? "invisible" : "visible"}`}
         aria-label="Navigasi Mobile"
       >
         {/* Drawer Header */}
@@ -430,6 +431,7 @@ export function DashboardShell({ user, children }: Props) {
             onClick={handleToggle}
             className="p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors shrink-0"
             aria-label={sidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
+            aria-expanded={mobileOpen}
           >
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -438,8 +440,8 @@ export function DashboardShell({ user, children }: Props) {
 
           {/* Breadcrumb */}
           <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 text-xs truncate">
-            <span className="text-[var(--text-muted)] font-medium hidden xs:inline shrink-0">VoterScope</span>
-            <span className="text-[var(--text-muted)] opacity-60 hidden xs:inline shrink-0">/</span>
+            <span className="text-[var(--text-muted)] font-medium hidden sm:inline shrink-0">VoterScope</span>
+            <span className="text-[var(--text-muted)] opacity-60 hidden sm:inline shrink-0">/</span>
             <span className="text-[var(--text-primary)] font-semibold truncate">
               {breadcrumbLabel}
             </span>

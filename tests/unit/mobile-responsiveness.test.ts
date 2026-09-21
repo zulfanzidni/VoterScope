@@ -83,6 +83,7 @@ describe("Mobile Responsiveness: Dashboard Shell & Navigation", () => {
 });
 
 describe("Mobile Responsiveness: Grids and Layout Containers", () => {
+  const shellContent = fs.readFileSync(path.resolve(process.cwd(), "app/dashboard/DashboardShell.tsx"), "utf-8");
   const dashboardPage = fs.readFileSync(path.resolve(process.cwd(), "app/dashboard/page.tsx"), "utf-8");
   const profileClient = fs.readFileSync(path.resolve(process.cwd(), "app/dashboard/profile/ProfileClient.tsx"), "utf-8");
   const demographicCharts = fs.readFileSync(path.resolve(process.cwd(), "components/dashboard/DemographicCharts.tsx"), "utf-8");
@@ -104,4 +105,44 @@ describe("Mobile Responsiveness: Grids and Layout Containers", () => {
     expect(demographicCharts).toContain("card p-4 sm:p-6");
     expect(demographicCharts).toContain("grid-cols-1 lg:grid-cols-2");
   });
+
+  it("truncates long territory names on narrow mobile screens via tickFormatter", () => {
+    expect(demographicCharts).toContain("tickFormatter=");
+  });
+
+  it("ensures all KPI and dashboard section cards use responsive padding", () => {
+    // No un-responsive p-5 cards on dashboard home
+    expect(dashboardPage).not.toContain('className="card p-5');
+    expect(dashboardPage).toContain('className="card p-4 sm:p-5');
+  });
+
+  it("uses valid Tailwind breakpoint sm:inline for breadcrumb instead of invalid xs:inline", () => {
+    expect(shellContent).not.toContain("xs:inline");
+    expect(shellContent).toContain("hidden sm:inline");
+  });
+
+  it("configures proper accessibility attributes on mobile drawer and toggle button", () => {
+    expect(shellContent).toContain("aria-hidden={!mobileOpen}");
+    expect(shellContent).toContain("aria-expanded={mobileOpen}");
+  });
 });
+
+describe("Form and Filter Accessibility on Mobile", () => {
+  const voterFilterBar = fs.readFileSync(path.resolve(process.cwd(), "components/voters/VoterFilterBar.tsx"), "utf-8");
+  const voterForm = fs.readFileSync(path.resolve(process.cwd(), "components/voters/VoterForm.tsx"), "utf-8");
+  const voterDetail = fs.readFileSync(path.resolve(process.cwd(), "app/dashboard/voters/[id]/VoterDetailClient.tsx"), "utf-8");
+
+  it("provides accessible test selectors on voter inputs and controls", () => {
+    expect(voterFilterBar).toContain('id="voter-search-input"');
+    expect(voterForm).toContain('id="voter-nik"');
+    expect(voterForm).toContain('id="voter-name"');
+    expect(voterForm).toContain('id="btn-generate-synthetic"');
+    expect(voterDetail).toContain('id="toggle-nik-btn"');
+    expect(voterDetail).toContain('id="masked-nik"');
+  });
+
+  it("ensures voter form cards use responsive padding", () => {
+    expect(voterForm).toContain("card p-4 sm:p-6");
+  });
+});
+

@@ -350,12 +350,16 @@ body {
 }
 
 .input-field.has-icon-left,
-.input-field.input-icon-left {
+.input-field.input-icon-left,
+.input.has-icon-left,
+.input.input-icon-left {
   padding-left: 2.5rem !important;
 }
 
 .input-field.has-icon-right,
-.input-field.input-icon-right {
+.input-field.input-icon-right,
+.input.has-icon-right,
+.input.input-icon-right {
   padding-right: 2.5rem !important;
 }
 

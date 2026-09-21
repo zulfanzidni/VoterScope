@@ -170,7 +170,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Active Voters */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">Pemilih Aktif</span>
             <span className="w-8 h-8 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Needs Review */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">Perlu Ditinjau</span>
             <span className="w-8 h-8 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 flex items-center justify-center">
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Total TPS or Total Users */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">
               {totalUsers !== null ? "TPS & Operator" : "Total TPS"}
@@ -238,7 +238,7 @@ export default async function DashboardPage() {
       {/* Two Column Grid: Quick Actions & Recent Audit Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="font-medium text-sm text-primary flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400">
@@ -308,7 +308,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Audit Activity */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="font-medium text-sm text-primary flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400">

@@ -28,7 +28,7 @@ export function VoterFilterBar({ filters, onChange, onReset, totalResults }: Pro
     <div className="card p-4 mb-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
       <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Search Query */}
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -40,6 +40,7 @@ export function VoterFilterBar({ filters, onChange, onReset, totalResults }: Pro
             </svg>
           </div>
           <input
+            id="voter-search-input"
             type="text"
             placeholder="Cari nama pemilih atau nomor TPS..."
             value={filters.q}
