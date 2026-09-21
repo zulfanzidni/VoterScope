@@ -141,6 +141,11 @@ jobs:
           npx prisma db push --skip-generate
           npx tsx prisma/seed.ts
 
+      - name: Build Next.js Application
+        env:
+          NODE_ENV: production
+        run: npm run build
+
       - name: Install Playwright Chromium Browser
         run: npx playwright install --with-deps chromium
 
