@@ -33,14 +33,16 @@ services:
       # origins — login would appear to succeed and then silently not persist.
       COOKIE_SECURE: "false"
 
-      # ── Connection pooling ─────────────────────────────────────────────────
-      # .env already ends DATABASE_URL with `?pgbouncer=true`, so only the extra
-      # parameters are appended (appending another `?` would produce a malformed
-      # URL). Prisma's default pool is (num_physical_cpus * 2 + 1) per process;
-      # against Supavisor's transaction pooler that queues. A long-lived
-      # container wants an explicit small pool.
-      # See docs/PERFORMANCE_PLAN.md (finding P0-1).
-      DATABASE_URL: "${DATABASE_URL}&connection_limit=1&pool_timeout=20&connect_timeout=15"
+      # Connection pooling. .env deliberately carries no connection_limit —
+      # its value is deployment-shaped. Serverless wants 1 (every cold instance
+      # opens its own pool); this long-lived container wants more, because the
+      # dashboard issues its aggregates in parallel and a pool of one
+      # serialises them. Measured here: 4 parallel counts against a pool of 1
+      # took 2339ms, vs ~200ms per query once overlap is allowed.
+      # 5 leaves headroom for the fan-out and stays well inside Supavisor's
+      # transaction-pooler limits.
+      # See docs/PERFORMANCE_PLAN.md (finding P0-1) and its Step 1 caveat.
+      DATABASE_URL: "${DATABASE_URL}&connection_limit=5"
 
     restart: unless-stopped
 

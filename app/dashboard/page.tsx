@@ -12,7 +12,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getUserScope, buildAuthorizedVoterFilter } from "@/lib/authorization";
-import { calculateDemographics } from "@/lib/analytics";
+import { summarizeDashboardDemographics } from "@/lib/analytics";
 import { DemographicCharts } from "@/components/dashboard/DemographicCharts";
 import { formatDate } from "@/lib/utils";
 
@@ -37,84 +37,198 @@ export default async function DashboardPage() {
   const scope = getUserScope(user);
   const voterFilter = buildAuthorizedVoterFilter(user);
 
-  // 1. Scoped metrics
-  const [totalVoters, activeVoters, needsReview, archivedVoters, tpsList, totalUsers, allVoters, recentAudit] =
-    await Promise.all([
-      prisma.voter.count({
-        where: { ...voterFilter, status: { not: "ARCHIVED" } },
-      }),
-      prisma.voter.count({
-        where: { ...voterFilter, status: "ACTIVE" },
-      }),
-      prisma.voter.count({
-        where: { ...voterFilter, status: "NEEDS_REVIEW" },
-      }),
-      prisma.voter.count({
-        where: { ...voterFilter, status: "ARCHIVED" },
-      }),
-      prisma.voter.groupBy({
-        by: ["tps"],
-        where: { ...voterFilter, status: { not: "ARCHIVED" } },
-      }),
-      user.role === "SUPER_ADMIN" || user.role === "PROVINCE_ADMIN"
-        ? prisma.user.count({ where: { isActive: true } })
-        : Promise.resolve(null),
-      prisma.voter.findMany({
-        where: { ...voterFilter, status: { not: "ARCHIVED" } },
-        select: {
-          dateOfBirth: true,
-          gender: true,
-          status: true,
-          address: true,
-          placeOfBirth: true,
-          provinceId: true,
-          kabupatenId: true,
-          kecamatanId: true,
-          kelurahanId: true,
-          tps: true,
-          kelurahan: { select: { name: true } },
-          kecamatan: { select: { name: true } },
-          kabupaten: { select: { name: true } },
-        },
-      }),
-      prisma.auditLog.findMany({
-        orderBy: { timestamp: "desc" },
-        take: 5,
-        where: user.role === "AUDITOR" || user.role === "SUPER_ADMIN" ? {} : { userId: user.id },
-        select: {
-          id: true,
-          action: true,
-          result: true,
-          timestamp: true,
-          resourceType: true,
-          user: { select: { username: true } },
-        },
-      }),
-    ]);
+  // All aggregates run in SQL, in parallel, and return only summary rows —
+  // never the voter table itself. Cost is O(1) in voter rows: the gender
+  // split, the distinct-birth-date buckets (age cohorts are computed from
+  // those), and the territory distribution are all `groupBy` result sets of a
+  // handful of rows each. The completeness score is a filtered count
+  // (non-null address + placeOfBirth), matching `calculateDemographics`'s
+  // per-record completeness rule.
+  //
+  // Note: Prisma's transaction-pooler mode (Supavisor, pgbouncer=true) does
+  // not support named prepared statements — `_count` inside `groupBy`'s
+  // `select` would emit one, so the buckets use `_count: { _all: true }` at
+  // the top level instead (see conn-prepared-statements in
+  // supabase-postgres-best-practices).
+  const notArchived = { ...voterFilter, status: { not: "ARCHIVED" } };
 
-  // 2. Demographic Analytics
-  const demographics = calculateDemographics(allVoters);
+  // Data completeness mirrors `calculateDemographics`' per-record rule: a
+  // record is complete when address AND placeOfBirth are truthy. Both are
+  // required (non-null) Prisma fields, so "present" means non-empty string —
+  // `not: null` is rejected by Prisma on required fields.
+  const completeFilter = {
+    ...notArchived,
+    address: { not: "" },
+    placeOfBirth: { not: "" },
+  };
 
-  // 3. Sub-territory distribution
-  const territoryMap = new Map<string, number>();
-  for (const v of allVoters) {
-    let key = "Lainnya";
-    if (scope.level === "NATIONAL" || scope.level === "PROVINCE") {
-      key = v.kabupaten?.name ?? "Kabupaten";
-    } else if (scope.level === "KABUPATEN") {
-      key = v.kecamatan?.name ?? "Kecamatan";
-    } else if (scope.level === "KECAMATAN") {
-      key = v.kelurahan?.name ?? "Kelurahan";
-    } else {
-      key = `TPS ${v.tps}`;
+  // Adapter: groupBy cannot take the narrower VoterWhereInput in this Prisma
+  // version's typings, so the runtime-identical filter objects are widened.
+  // Both spread only `voterFilter` (string IDs / undefined) plus Prisma
+  // operators — no raw user input reaches the query.
+  type FilterRecord = Record<string, unknown>;
+  const whereAll = notArchived as FilterRecord;
+  const whereScope = voterFilter as FilterRecord;
+  const whereComplete = completeFilter as FilterRecord;
+
+  const [
+    statusRows,
+    completeCount,
+    genderRows,
+    dobRows,
+    tpsRows,
+    subTerritoryRows,
+    totalUsers,
+    recentAudit,
+  ] = await Promise.all([
+    // One GROUP BY over the scope filter replaces all four status counts
+    // (total/active/needs-review/archived are derived below).
+    prisma.voter.groupBy({
+      by: ["status"],
+      where: whereScope,
+      _count: { _all: true },
+    }),
+    prisma.voter.count({ where: whereComplete }),
+    prisma.voter.groupBy({
+      by: ["gender"],
+      where: whereAll,
+      _count: { _all: true },
+    }),
+    prisma.voter.groupBy({
+      by: ["dateOfBirth"],
+      where: whereAll,
+      _count: { _all: true },
+    }),
+    prisma.voter.groupBy({
+      by: ["tps"],
+      where: whereAll,
+      _count: { _all: true },
+    }),
+    // Sub-territory distribution, bucketed at the viewer's scope level:
+    // kabupaten (NATIONAL/PROVINCE) → kecamatan (KABUPATEN) → kelurahan
+    // (KECAMATAN) → tps (KELURAHAN, already fetched above).
+    scope.level === "NATIONAL" || scope.level === "PROVINCE"
+      ? prisma.voter.groupBy({
+          by: ["kabupatenId"],
+          where: whereAll,
+          _count: { _all: true },
+        })
+      : scope.level === "KABUPATEN"
+        ? prisma.voter.groupBy({
+            by: ["kecamatanId"],
+            where: whereAll,
+            _count: { _all: true },
+          })
+        : scope.level === "KECAMATAN"
+          ? prisma.voter.groupBy({
+              by: ["kelurahanId"],
+              where: whereAll,
+              _count: { _all: true },
+            })
+          : Promise.resolve(null as null),
+    user.role === "SUPER_ADMIN" || user.role === "PROVINCE_ADMIN"
+      ? prisma.user.count({ where: { isActive: true } })
+      : Promise.resolve(null),
+    prisma.auditLog.findMany({
+      orderBy: { timestamp: "desc" },
+      take: 5,
+      where:
+        user.role === "AUDITOR" || user.role === "SUPER_ADMIN"
+          ? {}
+          : { userId: user.id },
+      select: {
+        id: true,
+        action: true,
+        result: true,
+        timestamp: true,
+        resourceType: true,
+        user: { select: { username: true } },
+      },
+    }),
+  ]);
+
+  // Demographics from the aggregate rows — identical shape to the old
+  // per-record path (see `summarizeDashboardDemographics` + its tests).
+  // Status counts come from the single status GROUP BY.
+  const countByStatus = new Map(statusRows.map((r) => [r.status, r._count._all]));
+  const activeVoters = countByStatus.get("ACTIVE") ?? 0;
+  const needsReview = countByStatus.get("NEEDS_REVIEW") ?? 0;
+  const archivedVoters = countByStatus.get("ARCHIVED") ?? 0;
+  // Total = all non-archived (matches old `status: { not: "ARCHIVED" }`).
+  const totalVoters = statusRows.reduce(
+    (sum, r) => (r.status === "ARCHIVED" ? sum : sum + r._count._all),
+    0
+  );
+  const demographics = summarizeDashboardDemographics({
+    total: totalVoters,
+    activeCount: activeVoters,
+    needsReviewCount: needsReview,
+    completeCount,
+    genderRows: genderRows.map((r) => ({
+      gender: r.gender,
+      count: r._count._all,
+    })),
+    dobRows: dobRows.map((r) => ({
+      dateOfBirth: r.dateOfBirth,
+      count: r._count._all,
+    })),
+  });
+
+  // Territory distribution from the aggregate rows: sort desc, top 8, resolve
+  // territory IDs → names with one typed read (TPS needs no lookup).
+  const tpsList = tpsRows.map((r) => r.tps);
+  let territoryDistribution: { name: string; count: number }[];
+
+  if (subTerritoryRows === null) {
+    // KELURAHAN scope — TPS is the leaf level.
+    territoryDistribution = tpsRows
+      .map((r) => ({ name: `TPS ${r.tps}`, count: r._count._all }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  } else {
+    const idKey =
+      scope.level === "NATIONAL" || scope.level === "PROVINCE"
+        ? "kabupatenId"
+        : scope.level === "KABUPATEN"
+          ? "kecamatanId"
+          : "kelurahanId";
+    const ids = subTerritoryRows
+      .map((r) => {
+        const row = r as unknown as Record<string, string | null>;
+        return row[idKey];
+      })
+      .filter((id): id is string => id !== null);
+
+    let nameById = new Map<string, string>();
+    if (ids.length > 0) {
+      const names =
+        idKey === "kabupatenId"
+          ? await prisma.kabupaten.findMany({
+              where: { id: { in: ids } },
+              select: { id: true, name: true },
+            })
+          : idKey === "kecamatanId"
+            ? await prisma.kecamatan.findMany({
+                where: { id: { in: ids } },
+                select: { id: true, name: true },
+              })
+            : await prisma.kelurahan.findMany({
+                where: { id: { in: ids } },
+                select: { id: true, name: true },
+              });
+      nameById = new Map(names.map((n) => [n.id, n.name]));
     }
-    territoryMap.set(key, (territoryMap.get(key) ?? 0) + 1);
-  }
 
-  const territoryDistribution = Array.from(territoryMap.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
+    territoryDistribution = subTerritoryRows
+      .map((r) => {
+        const row = r as unknown as Record<string, string | null | { _all: number }>;
+        const count = (row._count as { _all: number })._all;
+        const id = row[idKey] as string | null;
+        return { name: nameById.get(id ?? "") ?? "Lainnya", count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }
 
   const scopeDescription =
     scope.level === "NATIONAL"
