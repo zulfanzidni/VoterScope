@@ -18,7 +18,12 @@ concurrency:
 
 env:
   NODE_ENV: test
-  DATABASE_URL: "file:./dev.db"
+  # CI never connects to a database — generate/lint/typecheck/build are all
+  # offline. The URL must nevertheless use the postgresql:// protocol, because
+  # prisma/schema.prisma declares provider = "postgresql"; a file: URL fails
+  # schema validation with P1012.
+  DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+  DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
   SESSION_SECRET: "ci-dummy-session-secret-change-in-production-use-32chars"
   NIK_ENCRYPTION_KEY: "ci-dummy-nik-encryption-key-demo"
   NIK_LOOKUP_SECRET: "ci-dummy-nik-lookup-secret-demo0"
