@@ -36,13 +36,38 @@ export function getSessionSecret(): string {
   return secret;
 }
 
+/**
+ * Decides whether the session cookie carries the `Secure` flag.
+ *
+ * Defaults to the previous behaviour (Secure in production). The COOKIE_SECURE
+ * override exists because `NODE_ENV=production` is the right setting for a
+ * production build, but a production build served over plain HTTP on localhost
+ * — e.g. a local Docker container — would have its cookie rejected by the
+ * browser, silently breaking login. Set COOKIE_SECURE=false for that case only.
+ */
+function isCookieSecure(): boolean {
+  const override = process.env.COOKIE_SECURE?.trim().toLowerCase();
+
+  if (override === "false" || override === "0") return false;
+  if (override === "true" || override === "1") return true;
+
+  return process.env.NODE_ENV === "production";
+}
+
 export const SESSION_OPTIONS: SessionOptions = {
-  password: getSessionSecret(),
+  // Deliberately a getter, not a plain value. Next.js evaluates route modules
+  // during build-time page-data collection, so reading the secret eagerly here
+  // would make `next build` fail unless SESSION_SECRET happens to be set in the
+  // build environment. Deferring to first use keeps the build independent of
+  // runtime secrets while still failing loudly on a missing secret at runtime.
+  get password() {
+    return getSessionSecret();
+  },
   cookieName: "voterscope_session",
   ttl: 60 * 60 * 8, // 8 hours in seconds
   cookieOptions: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isCookieSecure(),
     sameSite: "lax",
     path: "/",
   },
