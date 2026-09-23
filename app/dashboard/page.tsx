@@ -130,9 +130,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 animate-in fade-in">
       {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-primary tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-primary tracking-tight">
             Selamat Datang, {user.fullName.split(" ")[0]}
           </h1>
           <p className="text-xs text-secondary mt-1">
@@ -141,18 +141,18 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-amber-500/30 bg-amber-500/5 text-xs text-amber-400 self-start sm:self-auto">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded border border-amber-500/30 bg-amber-500/5 text-[11px] sm:text-xs text-amber-400 self-start sm:self-auto">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="shrink-0">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <span>Simulasi Portofolio — Data pemilih berstatus sintetis terenkripsi</span>
+          <span className="leading-snug">Simulasi Portofolio — Data pemilih berstatus sintetis terenkripsi</span>
         </div>
       </div>
 
       {/* Primary KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Voters */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div id="stat-total-voters" className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">Total Pemilih</span>
             <span className="w-8 h-8 rounded border border-border-subtle bg-surface-elevated text-secondary flex items-center justify-center">
@@ -170,7 +170,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Active Voters */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">Pemilih Aktif</span>
             <span className="w-8 h-8 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Needs Review */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">Perlu Ditinjau</span>
             <span className="w-8 h-8 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400 flex items-center justify-center">
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Total TPS or Total Users */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-secondary uppercase tracking-wider">
               {totalUsers !== null ? "TPS & Operator" : "Total TPS"}
@@ -238,7 +238,7 @@ export default async function DashboardPage() {
       {/* Two Column Grid: Quick Actions & Recent Audit Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Actions */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="font-medium text-sm text-primary flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400">
@@ -308,7 +308,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Audit Activity */}
-        <div className="card p-5 flex flex-col justify-between">
+        <div className="card p-4 sm:p-5 flex flex-col justify-between">
           <div>
             <h3 className="font-medium text-sm text-primary flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400">

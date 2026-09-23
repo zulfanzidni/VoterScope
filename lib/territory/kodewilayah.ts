@@ -324,6 +324,11 @@ export async function getRegencies(provinceId: string): Promise<TerritoryItem[]>
     return localList;
   }
 
+  // If provinceId is not a valid Indonesian province code, return empty array immediately
+  if (!ALL_38_PROVINCES.some((p) => p.code === provinceId || p.id === provinceId)) {
+    return [];
+  }
+
   try {
     const res = await fetch(`${API_BASE}/regencies/${provinceId}.json`, {
       signal: AbortSignal.timeout(3000),
@@ -362,6 +367,11 @@ export async function getDistricts(regencyId: string): Promise<TerritoryItem[]> 
   if (localSnapshot && localSnapshot.length > 0) {
     cache.districts.set(regencyId, localSnapshot);
     return localSnapshot;
+  }
+
+  // If regency is completely unknown in all 514 official regencies, return empty immediately
+  if (!findRegencyById(regencyId)) {
+    return [];
   }
 
   // 2. Try live API with Next.js persistent Data Cache

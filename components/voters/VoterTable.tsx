@@ -233,6 +233,7 @@ export function VoterTable({
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
                         <Link
+                          id={`view-voter-${voter.id}`}
                           href={`/dashboard/voters/${voter.id}`}
                           className="btn btn-secondary btn-sm !py-1 !px-2.5 text-[11px]"
                           title="Lihat detail lengkap"
@@ -272,7 +273,7 @@ export function VoterTable({
 
       {/* Pagination Footer */}
       <div className="py-3 px-4 border-t border-border-default bg-[var(--bg-elevated)]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-secondary">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
           <span>Tampilkan</span>
           <select
             value={pageSize}

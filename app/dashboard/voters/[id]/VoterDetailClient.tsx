@@ -206,22 +206,22 @@ export function VoterDetailClient({ voter, user }: Props) {
       )}
 
       {/* Hero Card: Masked NIK & Security Banner */}
-      <div className="card p-6 border-border-subtle bg-surface">
+      <div className="card p-4 sm:p-6 border-border-subtle bg-surface">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0">
             <div className="text-xs font-medium text-secondary uppercase tracking-wider flex items-center gap-2">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-blue-400 shrink-0">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <span>NIK Sintetis Terenkripsi (AES-256-GCM)</span>
             </div>
-            <div className="text-2xl font-mono tabular-nums font-semibold text-blue-400 tracking-wide">
+            <div className="text-xl sm:text-2xl font-mono tabular-nums font-semibold text-blue-400 tracking-wide break-all sm:break-normal">
               {revealedNik ? (
-                <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20 font-mono">
+                <span id="revealed-nik" className="text-emerald-400 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 rounded border border-emerald-500/20 font-mono inline-block">
                   {revealedNik}
                 </span>
               ) : (
-                voter.nikMasked
+                <span id="masked-nik">{voter.nikMasked}</span>
               )}
             </div>
             <p className="text-[11px] text-muted">
@@ -230,6 +230,7 @@ export function VoterDetailClient({ voter, user }: Props) {
           </div>
 
           <button
+            id="toggle-nik-btn"
             type="button"
             onClick={handleToggleReveal}
             disabled={revealing}
@@ -255,10 +256,10 @@ export function VoterDetailClient({ voter, user }: Props) {
       </div>
 
       {/* Two-Column Grid: Demographics vs Territory & Audit */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column: Demographics (2 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="card p-6 space-y-4">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="card p-4 sm:p-6 space-y-4">
             <h3 className="font-semibold text-primary text-sm border-b border-border-subtle pb-3">
               Informasi Kependudukan (Sintetis)
             </h3>
@@ -314,9 +315,9 @@ export function VoterDetailClient({ voter, user }: Props) {
         </div>
 
         {/* Right Column: Territory & Audit Trail (1 col) */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Territory Hierarchy */}
-          <div className="card p-6 space-y-4">
+          <div className="card p-4 sm:p-6 space-y-4">
             <h3 className="font-semibold text-primary text-sm border-b border-border-subtle pb-3">
               Wilayah Administrasi Pemilih
             </h3>
@@ -352,7 +353,7 @@ export function VoterDetailClient({ voter, user }: Props) {
           </div>
 
           {/* Audit & Security Metadata */}
-          <div className="card p-6 space-y-4">
+          <div className="card p-4 sm:p-6 space-y-4">
             <h3 className="font-semibold text-primary text-sm border-b border-border-subtle pb-3">
               Audit & Jejak Keamanan
             </h3>

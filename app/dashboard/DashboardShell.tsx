@@ -5,7 +5,7 @@
  * Clean, distraction-free administrative layout with crisp navigation and topbar.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -107,6 +107,48 @@ export function DashboardShell({ user, children }: Props) {
   const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  // Close mobile drawer on route change (render-time adjustment per React guidelines)
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setMobileOpen(false);
+  }
+
+  // Close mobile drawer on desktop resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileOpen) {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
+
+  // Prevent body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => !item.roles || item.roles.includes(user.role)
@@ -123,6 +165,14 @@ export function DashboardShell({ user, children }: Props) {
     }
   };
 
+  const handleToggle = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setMobileOpen((prev) => !prev);
+    } else {
+      setSidebarOpen((prev) => !prev);
+    }
+  };
+
   const initials = (user?.fullName || user?.username || "U")
     .split(" ")
     .map((n) => n[0])
@@ -130,12 +180,140 @@ export function DashboardShell({ user, children }: Props) {
     .join("")
     .toUpperCase();
 
+  const breadcrumbLabel =
+    pathname === "/dashboard"
+      ? "Dashboard"
+      : pathname.startsWith("/dashboard/voters/new")
+      ? "Tambah Pemilih"
+      : pathname.includes("/edit")
+      ? "Edit Pemilih"
+      : pathname.startsWith("/dashboard/voters")
+      ? "Data Pemilih"
+      : pathname.startsWith("/dashboard/users")
+      ? "Manajemen User"
+      : pathname.startsWith("/dashboard/audit")
+      ? "Audit Log"
+      : pathname.startsWith("/dashboard/profile")
+      ? "Profil & Akun"
+      : "Dashboard";
+
   return (
     <div className="flex min-h-screen bg-[var(--bg-base)]">
-      {/* Sidebar */}
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          id="mobile-drawer-backdrop"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-xs transition-opacity animate-in fade-in"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile Off-Canvas Drawer (only on < md) */}
+      <aside
+        id="mobile-drawer"
+        aria-hidden={!mobileOpen}
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] shadow-2xl md:hidden flex flex-col transition-transform duration-200 ease-out ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
+        } ${!mobileOpen ? "invisible" : "visible"}`}
+        aria-label="Navigasi Mobile"
+      >
+        {/* Drawer Header */}
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[var(--border-subtle)] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[var(--brand-500)] flex items-center justify-center text-[var(--btn-primary-text)] shrink-0 shadow-sm">
+              <ShieldIcon />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-[var(--text-primary)] tracking-tight">
+                VoterScope
+              </div>
+              <div className="text-[10.5px] text-[var(--text-muted)] font-medium">
+                Admin Panel
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+            aria-label="Tutup menu navigasi"
+          >
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Drawer Navigation Links */}
+        <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+          {visibleNavItems.map((item) => {
+            const isActive =
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                id={`mobile-nav-${item.href.split("/").pop()}`}
+                onClick={() => setMobileOpen(false)}
+                className={`nav-item ${isActive ? "active" : ""} justify-start text-sm py-2.5 px-3 rounded-lg`}
+              >
+                <span className="shrink-0">{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Drawer Footer User Card & Logout */}
+        <div className="p-3 border-t border-[var(--border-subtle)] shrink-0">
+          <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded bg-[var(--brand-500)] text-[var(--btn-primary-text)] font-bold text-xs flex items-center justify-center shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                  {user.fullName}
+                </div>
+                <div className="text-[10.5px] text-[var(--text-muted)] truncate">
+                  {user.username}
+                </div>
+              </div>
+            </div>
+            <div className="mb-2.5">
+              <span className={`badge ${ROLE_BADGE_CLASS[user.role] ?? "badge-slate"} text-[10px]`}>
+                {ROLE_LABEL[user.role] ?? user.role}
+              </span>
+            </div>
+            <button
+              id="mobile-logout-btn"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="btn btn-ghost btn-sm w-full justify-center text-xs text-[var(--text-muted)] hover:text-red-400 py-1.5"
+            >
+              {loggingOut ? (
+                <span>Keluar...</span>
+              ) : (
+                <>
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Keluar</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Desktop Sidebar (hidden on mobile, in-flow sticky on md and up) */}
       <aside
         style={{ width: sidebarOpen ? "230px" : "60px" }}
-        className="shrink-0 sticky top-0 h-screen bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex flex-col transition-all duration-200 z-40"
+        className="hidden md:flex shrink-0 sticky top-0 h-screen bg-[var(--bg-sidebar)] border-r border-[var(--border-subtle)] flex-col transition-all duration-200 z-30"
       >
         {/* Sidebar header */}
         <div className="h-14 px-3.5 flex items-center gap-3 border-b border-[var(--border-subtle)]">
@@ -244,45 +422,36 @@ export function DashboardShell({ user, children }: Props) {
       </aside>
 
       {/* Main Viewport */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 w-full">
         {/* Top bar */}
-        <header className="h-14 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] flex items-center px-5 gap-3 sticky top-0 z-30">
+        <header className="h-14 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] flex items-center px-3 sm:px-5 gap-2 sm:gap-3 sticky top-0 z-20">
           {/* Sidebar toggle */}
           <button
             id="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+            onClick={handleToggle}
+            className="p-2 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors shrink-0"
             aria-label={sidebarOpen ? "Tutup sidebar" : "Buka sidebar"}
+            aria-expanded={mobileOpen}
           >
-            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={sidebarOpen ? "M4 6h16M4 12h10M4 18h16" : "M4 6h16M4 12h16M4 18h16"} />
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
           {/* Breadcrumb */}
-          <div className="flex-1 flex items-center gap-2 text-xs">
-            <span className="text-[var(--text-muted)] font-medium">VoterScope</span>
-            <span className="text-[var(--text-muted)] opacity-60">/</span>
-            <span className="text-[var(--text-primary)] font-semibold">
-              {pathname === "/dashboard"
-                ? "Dashboard"
-                : pathname.startsWith("/dashboard/voters")
-                ? "Data Pemilih"
-                : pathname.startsWith("/dashboard/users")
-                ? "Manajemen User"
-                : pathname.startsWith("/dashboard/audit")
-                ? "Audit Log"
-                : pathname.startsWith("/dashboard/profile")
-                ? "Profil & Akun"
-                : ""}
+          <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2 text-xs truncate">
+            <span className="text-[var(--text-muted)] font-medium hidden sm:inline shrink-0">VoterScope</span>
+            <span className="text-[var(--text-muted)] opacity-60 hidden sm:inline shrink-0">/</span>
+            <span className="text-[var(--text-primary)] font-semibold truncate">
+              {breadcrumbLabel}
             </span>
           </div>
 
           {/* Theme Switcher */}
-          <ThemeToggle showLabel={true} />
+          <ThemeToggle showLabel={true} className="shrink-0" />
 
           {/* Subtle Demo tag */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)] font-medium">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-secondary)] font-medium shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <span>Data Simulasi</span>
           </div>
@@ -291,10 +460,10 @@ export function DashboardShell({ user, children }: Props) {
           <Link
             href="/dashboard/profile"
             id="user-profile-pill"
-            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-md hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border-default)] transition-all text-decoration-none"
+            className="flex items-center gap-2 p-1 sm:pl-2 sm:pr-3 sm:py-1 rounded-md hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border-default)] transition-all text-decoration-none shrink-0"
             title="Pengaturan Profil"
           >
-            <div className="w-5 h-5 rounded bg-[var(--brand-500)] text-[var(--btn-primary-text)] font-bold text-[10px] flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded bg-[var(--brand-500)] text-[var(--btn-primary-text)] font-bold text-[10px] flex items-center justify-center shrink-0">
               {initials}
             </div>
             <span className="text-xs text-[var(--text-primary)] font-medium hidden md:inline truncate max-w-[120px]">
@@ -304,8 +473,8 @@ export function DashboardShell({ user, children }: Props) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-5 md:p-6 overflow-auto">
-          <div className="max-w-[1360px] mx-auto w-full">
+        <main className="flex-1 p-3.5 sm:p-5 md:p-6 overflow-x-hidden overflow-y-auto">
+          <div className="max-w-[1360px] mx-auto w-full min-w-0">
             {children}
           </div>
         </main>

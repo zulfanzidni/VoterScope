@@ -135,9 +135,9 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
   return (
     <div className="space-y-6 my-6">
       {/* 2-Column Grid: Gender Donut & Age Cohorts Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 1. Gender Distribution (Donut) */}
-        <div className="card p-6 flex flex-col justify-between">
+        <div className="card p-4 sm:p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <div>
               <h3 className="font-semibold text-sm text-primary flex items-center gap-2">
@@ -178,7 +178,7 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
           </div>
 
           {/* Legend Details */}
-          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border-subtle text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-3 border-t border-border-subtle text-xs">
             <div className="flex items-center gap-2 p-2 rounded bg-surface/50 border border-border-subtle">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: GENDER_COLORS[0] }}></span>
               <div>
@@ -204,7 +204,7 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
         </div>
 
         {/* 2. Age Cohorts (Bar Chart) */}
-        <div className="card p-6 flex flex-col justify-between">
+        <div className="card p-4 sm:p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <div>
               <h3 className="font-semibold text-sm text-primary flex items-center gap-2">
@@ -260,9 +260,9 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
       </div>
 
       {/* 2-Column Grid: Territory Distribution & Data Quality Integrity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* 3. Geographic Distribution (Horizontal Bar Chart) - 2 cols */}
-        <div className="lg:col-span-2 card p-6 flex flex-col justify-between">
+        <div className="lg:col-span-2 card p-4 sm:p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <div>
               <h3 className="font-semibold text-sm text-primary flex items-center gap-2">
@@ -284,7 +284,7 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
                 <BarChart
                   data={territoryDistribution}
                   layout="vertical"
-                  margin={{ top: 10, right: 25, left: 40, bottom: 5 }}
+                  margin={{ top: 10, right: 15, left: 0, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.07)" horizontal={false} />
                   <XAxis type="number" stroke="var(--text-muted)" fontSize={11} allowDecimals={false} />
@@ -293,8 +293,9 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
                     dataKey="name"
                     stroke="var(--text-secondary)"
                     fontSize={11}
-                    width={110}
+                    width={90}
                     tickLine={false}
+                    tickFormatter={(val: string) => (val && val.length > 12 ? `${val.slice(0, 11)}…` : val)}
                   />
                   <Tooltip content={<CustomChartTooltip />} />
                   <Bar
@@ -314,7 +315,7 @@ export function DemographicCharts({ demographics, territoryDistribution, scopeLe
         </div>
 
         {/* 4. Data Quality & Integrity Scorecard - 1 col */}
-        <div className="card p-6 flex flex-col justify-between">
+        <div className="card p-4 sm:p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
             <div>
               <h3 className="font-semibold text-sm text-primary flex items-center gap-2">

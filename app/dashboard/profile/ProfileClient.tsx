@@ -169,17 +169,16 @@ export function ProfileClient({ initialProfile }: Props) {
   };
 
   return (
-    <div style={{ maxWidth: "1080px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+    <div className="max-w-[1080px] mx-auto flex flex-col gap-4 sm:gap-6 w-full min-w-0">
       {/* Header Profile Hero Card */}
       <div
-        className="card"
+        className="card p-4 sm:p-6"
         style={{
-          padding: "24px",
           background: "var(--bg-surface)",
           border: "1px solid var(--border-subtle)",
         }}
       >
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "20px" }}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
           {/* Avatar */}
           <div
             style={{
@@ -200,7 +199,7 @@ export function ProfileClient({ initialProfile }: Props) {
           </div>
 
           {/* User Details */}
-          <div style={{ flex: 1, minWidth: "240px" }}>
+          <div className="flex-1 min-w-0 w-full">
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
               <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
                 {profile.fullName}
@@ -237,9 +236,9 @@ export function ProfileClient({ initialProfile }: Props) {
       </div>
 
       {/* Main Grid: Form 1 & Form 2 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "24px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Form 1: Edit Profile */}
-        <div className="card" style={{ padding: "24px" }}>
+        <div className="card p-4 sm:p-6">
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
             <div
               style={{
@@ -431,7 +430,7 @@ export function ProfileClient({ initialProfile }: Props) {
         </div>
 
         {/* Form 2: Change Password */}
-        <div className="card" style={{ padding: "24px" }}>
+        <div className="card p-4 sm:p-6">
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
             <div
               style={{
@@ -689,9 +688,8 @@ export function ProfileClient({ initialProfile }: Props) {
 
       {/* Security & System Architecture Info Card */}
       <div
-        className="card"
+        className="card p-4 sm:p-6"
         style={{
-          padding: "24px",
           background: "rgba(15, 23, 42, 0.4)",
           border: "1px solid var(--border-subtle)",
         }}
@@ -723,7 +721,7 @@ export function ProfileClient({ initialProfile }: Props) {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
           <div style={{ padding: "12px", borderRadius: "8px", background: "rgba(30, 41, 59, 0.3)", border: "1px solid var(--border-subtle)" }}>
             <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>Enkripsi Kata Sandi</div>
             <div style={{ fontSize: "13px", fontWeight: 600, color: "hsl(160 84% 45%)" }}>Argon2id (m=65536, t=3, p=4)</div>

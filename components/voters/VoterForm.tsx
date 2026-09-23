@@ -259,6 +259,7 @@ export function VoterForm({ user, initialData, isEdit = false, voterId }: Props)
 
         {!isEdit && (
           <button
+            id="btn-generate-synthetic"
             type="button"
             onClick={handleFillSyntheticData}
             className="btn btn-secondary btn-sm text-xs shrink-0 inline-flex items-center gap-1.5"
@@ -272,7 +273,7 @@ export function VoterForm({ user, initialData, isEdit = false, voterId }: Props)
       </div>
 
       {/* Bagian 1: Identitas Utama */}
-      <div className="card p-6 space-y-4">
+      <div className="card p-4 sm:p-6 space-y-4">
         <h3 className="font-medium text-primary text-sm flex items-center gap-2 border-b border-border-subtle pb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
           Identitas Pemilih (Sintetis)
@@ -286,6 +287,7 @@ export function VoterForm({ user, initialData, isEdit = false, voterId }: Props)
               {isEdit && <span className="text-muted lowercase"> (tidak dapat diubah)</span>}
             </label>
             <input
+              id="voter-nik"
               type="text"
               maxLength={16}
               disabled={isEdit}
@@ -303,6 +305,7 @@ export function VoterForm({ user, initialData, isEdit = false, voterId }: Props)
           <div>
             <label className="input-label">Nama Lengkap</label>
             <input
+              id="voter-name"
               type="text"
               placeholder="Contoh: Budi Santoso"
               value={formData.fullName}
@@ -411,7 +414,7 @@ export function VoterForm({ user, initialData, isEdit = false, voterId }: Props)
       </div>
 
       {/* Bagian 2: Wilayah & Administrasi TPS */}
-      <div className="card p-6 space-y-4">
+      <div className="card p-4 sm:p-6 space-y-4">
         <h3 className="font-semibold text-primary text-sm flex items-center gap-2 border-b border-border-subtle pb-3">
           <span className="w-2 h-2 rounded-full bg-accent-emerald"></span>
           Wilayah Administrasi & Penempatan TPS
