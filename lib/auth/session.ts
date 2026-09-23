@@ -15,8 +15,29 @@ export type SessionData = {
   isLoggedIn: boolean;
 };
 
+/**
+ * Resolves the session encryption secret.
+ *
+ * iron-session requires >= 32 characters. There is deliberately NO hardcoded
+ * fallback: a built-in default would silently produce cookies sealed with a
+ * publicly known key in any deployment that forgot to set SESSION_SECRET.
+ * Failing loudly is the safe behaviour.
+ */
+export function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "SESSION_SECRET is missing or shorter than 32 characters. " +
+        "Set it to a random value (e.g. `openssl rand -hex 32`) before starting the server."
+    );
+  }
+
+  return secret;
+}
+
 export const SESSION_OPTIONS: SessionOptions = {
-  password: process.env.SESSION_SECRET ?? "fallback-dev-only-secret-not-for-production-00",
+  password: getSessionSecret(),
   cookieName: "voterscope_session",
   ttl: 60 * 60 * 8, // 8 hours in seconds
   cookieOptions: {
