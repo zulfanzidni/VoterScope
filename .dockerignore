@@ -1,0 +1,50 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+# Reinstalled inside the image with `npm ci`; the host copy is platform-specific
+# (Windows binaries) and would be wrong on Linux.
+node_modules
+
+# ─── Build output ────────────────────────────────────────────────────────────
+.next
+out
+build
+dist
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Secrets ─────────────────────────────────────────────────────────────────
+# Real credentials are injected at runtime via compose `env_file` / `environment`.
+# The build must not bake them in.
+.env
+.env.*
+!.env.example
+
+# ─── Local database leftovers ────────────────────────────────────────────────
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ─── Version control & CI ────────────────────────────────────────────────────
+.git
+.gitignore
+.github
+
+# ─── Tests, docs, tooling (not needed to build or run) ───────────────────────
+tests
+docs
+coverage
+playwright-report
+test-results
+blob-report
+*.md
+!README.md
+
+# ─── Editors & OS noise ──────────────────────────────────────────────────────
+.vscode
+.idea
+.zcode
+.DS_Store
+Thumbs.db
+*.log

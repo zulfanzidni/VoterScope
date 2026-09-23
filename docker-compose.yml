@@ -1,0 +1,58 @@
+# VoterScope Demo — local Docker deployment
+#
+#   docker compose up --build      start
+#   docker compose logs -f app     follow logs
+#   docker compose down            stop
+#
+# Reads credentials from .env (gitignored). No database container: the app talks
+# to hosted Supabase, and prisma/schema.prisma declares a directUrl, so a local
+# Postgres would not serve migrations without reworking the datasource.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: voterscope-demo:local
+    container_name: voterscope-app
+
+    ports:
+      - "3000:3000"
+
+    # Loads DATABASE_URL, DIRECT_URL, SESSION_SECRET, NIK_ENCRYPTION_KEY,
+    # NIK_LOOKUP_SECRET, NEXT_PUBLIC_APP_NAME from .env.
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+
+      # ── Local HTTP ─────────────────────────────────────────────────────────
+      # A production build served over plain http://localhost would otherwise
+      # set the `Secure` cookie flag, which browsers reject for non-HTTPS
+      # origins — login would appear to succeed and then silently not persist.
+      COOKIE_SECURE: "false"
+
+      # ── Connection pooling ─────────────────────────────────────────────────
+      # .env already ends DATABASE_URL with `?pgbouncer=true`, so only the extra
+      # parameters are appended (appending another `?` would produce a malformed
+      # URL). Prisma's default pool is (num_physical_cpus * 2 + 1) per process;
+      # against Supavisor's transaction pooler that queues. A long-lived
+      # container wants an explicit small pool.
+      # See docs/PERFORMANCE_PLAN.md (finding P0-1).
+      DATABASE_URL: "${DATABASE_URL}&connection_limit=1&pool_timeout=20&connect_timeout=15"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
