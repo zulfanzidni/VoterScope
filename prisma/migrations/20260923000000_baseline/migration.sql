@@ -1,117 +1,120 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateTable
 CREATE TABLE "provinces" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "provinces_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "kabupaten" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "provinceId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "kabupaten_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "kabupaten_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "kecamatan" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "kabupatenId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "kecamatan_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "kecamatan_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "kelurahan" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "kecamatanId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "kelurahan_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "kelurahan_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "provinceId" TEXT,
     "kabupatenId" TEXT,
     "kecamatanId" TEXT,
     "kelurahanId" TEXT,
-    CONSTRAINT "users_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "users_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "users_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "users_kelurahanId_fkey" FOREIGN KEY ("kelurahanId") REFERENCES "kelurahan" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "voters" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "nikEncrypted" TEXT NOT NULL,
     "nikLookupHash" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
     "placeOfBirth" TEXT NOT NULL,
-    "dateOfBirth" DATETIME NOT NULL,
+    "dateOfBirth" TIMESTAMP(3) NOT NULL,
     "gender" TEXT NOT NULL,
     "address" TEXT NOT NULL,
     "religion" TEXT NOT NULL,
     "maritalStatus" TEXT NOT NULL,
     "occupation" TEXT NOT NULL,
     "citizenship" TEXT NOT NULL DEFAULT 'WNI',
-    "validUntil" DATETIME,
+    "validUntil" TIMESTAMP(3),
     "tps" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    "archivedAt" DATETIME,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "archivedAt" TIMESTAMP(3),
     "provinceId" TEXT NOT NULL,
     "kabupatenId" TEXT NOT NULL,
     "kecamatanId" TEXT NOT NULL,
     "kelurahanId" TEXT NOT NULL,
     "createdBy" TEXT,
     "updatedBy" TEXT,
-    CONSTRAINT "voters_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "voters_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "voters_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "voters_kelurahanId_fkey" FOREIGN KEY ("kelurahanId") REFERENCES "kelurahan" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "voters_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "voters_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "users" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+
+    CONSTRAINT "voters_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "audit_logs" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "userId" TEXT,
     "action" TEXT NOT NULL,
     "resourceType" TEXT NOT NULL,
     "resourceId" TEXT,
-    "timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "ipAddress" TEXT,
     "userAgent" TEXT,
     "result" TEXT NOT NULL DEFAULT 'SUCCESS',
     "metadata" TEXT,
-    CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+
+    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -223,6 +226,12 @@ CREATE INDEX "voters_fullName_idx" ON "voters"("fullName");
 CREATE INDEX "voters_archivedAt_idx" ON "voters"("archivedAt");
 
 -- CreateIndex
+CREATE INDEX "voters_createdBy_idx" ON "voters"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "voters_updatedBy_idx" ON "voters"("updatedBy");
+
+-- CreateIndex
 CREATE INDEX "audit_logs_userId_idx" ON "audit_logs"("userId");
 
 -- CreateIndex
@@ -236,3 +245,46 @@ CREATE INDEX "audit_logs_timestamp_idx" ON "audit_logs"("timestamp");
 
 -- CreateIndex
 CREATE INDEX "audit_logs_result_idx" ON "audit_logs"("result");
+
+-- AddForeignKey
+ALTER TABLE "kabupaten" ADD CONSTRAINT "kabupaten_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "kecamatan" ADD CONSTRAINT "kecamatan_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "kelurahan" ADD CONSTRAINT "kelurahan_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_kelurahanId_fkey" FOREIGN KEY ("kelurahanId") REFERENCES "kelurahan"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_provinceId_fkey" FOREIGN KEY ("provinceId") REFERENCES "provinces"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_kabupatenId_fkey" FOREIGN KEY ("kabupatenId") REFERENCES "kabupaten"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_kecamatanId_fkey" FOREIGN KEY ("kecamatanId") REFERENCES "kecamatan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_kelurahanId_fkey" FOREIGN KEY ("kelurahanId") REFERENCES "kelurahan"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "voters" ADD CONSTRAINT "voters_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

@@ -150,7 +150,11 @@ Validation rules:
 - IDs: CUID format
 - Hierarchy: parent-child relationships validated
 
-Client-side validation uses the same Zod schemas via `@hookform/resolvers/zod`.
+Client-side validation mirrors these rules using `react-hook-form`'s built-in
+validators, deliberately without importing the Zod schemas — doing so would ship
+zod to the browser for two text fields. Client validation is a UX affordance
+only; the route handler re-validates every request through the Zod schemas, which
+remain the single source of truth.
 
 ---
 

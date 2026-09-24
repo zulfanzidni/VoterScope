@@ -8,7 +8,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { getAgeGroupBracket, calculateDemographics } from "@/lib/analytics";
+import {
+  getAgeGroupBracket,
+  calculateDemographics,
+  summarizeDashboardDemographics,
+} from "@/lib/analytics";
 
 describe("getAgeGroupBracket", () => {
   const referenceDate = new Date("2026-01-01");
@@ -113,5 +117,74 @@ describe("calculateDemographics", () => {
 
     const genX = result.ageGroups.find((ag) => ag.group === "40-55");
     expect(genX?.count).toBe(1);
+  });
+});
+
+describe("summarizeDashboardDemographics", () => {
+  // Same voter set as the per-record test above, expressed as the SQL
+  // aggregate rows the dashboard page produces: gender buckets (with counts)
+  // and distinct-birth-date buckets (with counts).
+  const genderRows = [
+    { gender: "LAKI_LAKI", count: 2 },
+    { gender: "PEREMPUAN", count: 2 },
+  ];
+  const dobRows = [
+    { dateOfBirth: "2005-01-01", count: 1 }, // ~21 yo -> 17-24
+    { dateOfBirth: "2000-01-01", count: 1 }, // ~26 yo -> 25-39
+    { dateOfBirth: "1995-01-01", count: 1 }, // ~31 yo -> 25-39
+    { dateOfBirth: "1980-01-01", count: 1 }, // ~46 yo -> 40-55
+  ];
+
+  it("matches calculateDemographics exactly on the same voter set", () => {
+    const legacy = calculateDemographics([
+      { dateOfBirth: "2005-01-01", gender: "LAKI_LAKI", status: "ACTIVE", address: "Jl. A", placeOfBirth: "Kota A" },
+      { dateOfBirth: "2000-01-01", gender: "PEREMPUAN", status: "ACTIVE", address: "Jl. B", placeOfBirth: "Kota B" },
+      { dateOfBirth: "1995-01-01", gender: "PEREMPUAN", status: "NEEDS_REVIEW", address: "Jl. C", placeOfBirth: "Kota C" },
+      { dateOfBirth: "1980-01-01", gender: "LAKI_LAKI", status: "ACTIVE", address: "Jl. D", placeOfBirth: "Kota D" },
+    ]);
+
+    const summary = summarizeDashboardDemographics({
+      total: 4,
+      activeCount: 3,
+      needsReviewCount: 1,
+      completeCount: 4,
+      genderRows,
+      dobRows,
+    });
+
+    expect(summary).toEqual(legacy);
+  });
+
+  it("returns the same empty-set shape as calculateDemographics", () => {
+    expect(
+      summarizeDashboardDemographics({
+        total: 0,
+        activeCount: 0,
+        needsReviewCount: 0,
+        completeCount: 0,
+        genderRows: [],
+        dobRows: [],
+      })
+    ).toEqual(calculateDemographics([]));
+  });
+
+  it("aggregates weighted distinct-birth-date buckets correctly", () => {
+    // Two voters sharing one birth date must count twice.
+    const summary = summarizeDashboardDemographics({
+      total: 3,
+      activeCount: 3,
+      needsReviewCount: 0,
+      completeCount: 3,
+      genderRows: [
+        { gender: "LAKI_LAKI", count: 1 },
+        { gender: "PEREMPUAN", count: 2 },
+      ],
+      dobRows: [{ dateOfBirth: "2005-06-15", count: 3 }],
+    });
+
+    const genZ = summary.ageGroups.find((ag) => ag.group === "17-24");
+    expect(genZ?.count).toBe(3);
+    expect(genZ?.percent).toBe(100);
+    expect(summary.total).toBe(3);
   });
 });

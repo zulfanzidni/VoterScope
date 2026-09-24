@@ -169,3 +169,123 @@ export function calculateDemographics(
     },
   };
 }
+
+/**
+ * Builds the same {@link DemographicSummary} shape as
+ * {@link calculateDemographics}, but from pre-aggregated SQL rows instead of
+ * per-voter records.
+ *
+ * The dashboard page feeds this with `groupBy` results (gender buckets,
+ * distinct-birth-date buckets, completeness count), so page cost is O(1) in
+ * voter rows: a handful of tiny aggregate result sets instead of one
+ * unpaginated `findMany` plus JS walks. Labels, percentages and the empty-set
+ * shape match `calculateDemographics` exactly so charts render identically.
+ */
+export type GenderCountRow = { gender: string; count: number };
+export type DobCountRow = { dateOfBirth: Date | string; count: number };
+
+export function summarizeDashboardDemographics(input: {
+  total: number;
+  activeCount: number;
+  needsReviewCount: number;
+  completeCount: number;
+  genderRows: GenderCountRow[];
+  dobRows: DobCountRow[];
+}): DemographicSummary {
+  const {
+    total,
+    activeCount,
+    needsReviewCount,
+    completeCount,
+    genderRows,
+    dobRows,
+  } = input;
+
+  if (total === 0) {
+    return {
+      total: 0,
+      gender: { male: 0, female: 0, malePercent: 0, femalePercent: 0 },
+      ageGroups: [
+        { group: "17-24", label: AGE_GROUP_LABELS["17-24"], count: 0, percent: 0 },
+        { group: "25-39", label: AGE_GROUP_LABELS["25-39"], count: 0, percent: 0 },
+        { group: "40-55", label: AGE_GROUP_LABELS["40-55"], count: 0, percent: 0 },
+        { group: "56+", label: AGE_GROUP_LABELS["56+"], count: 0, percent: 0 },
+      ],
+      dataQuality: { completenessScore: 100, activeRate: 0, needsReviewRate: 0 },
+    };
+  }
+
+  let maleCount = 0;
+  let femaleCount = 0;
+  for (const row of genderRows) {
+    if (row.gender === "LAKI_LAKI") maleCount += row.count;
+    else if (row.gender === "PEREMPUAN") femaleCount += row.count;
+  }
+
+  const ageCounts: Record<AgeGroupBracket, number> = {
+    "17-24": 0,
+    "25-39": 0,
+    "40-55": 0,
+    "56+": 0,
+    UNDER_AGE: 0,
+  };
+  // One pass over *distinct* birth dates (bounded, tiny payload), not voters.
+  for (const row of dobRows) {
+    ageCounts[getAgeGroupBracket(row.dateOfBirth)] += row.count;
+  }
+
+  const malePercent = Math.round((maleCount / total) * 100);
+  const femalePercent = 100 - malePercent;
+
+  const ageGroups: DemographicSummary["ageGroups"] = [
+    {
+      group: "17-24",
+      label: "17 - 24 th (Gen Z)",
+      count: ageCounts["17-24"],
+      percent: Math.round((ageCounts["17-24"] / total) * 100),
+    },
+    {
+      group: "25-39",
+      label: "25 - 39 th (Milenial)",
+      count: ageCounts["25-39"],
+      percent: Math.round((ageCounts["25-39"] / total) * 100),
+    },
+    {
+      group: "40-55",
+      label: "40 - 55 th (Gen X)",
+      count: ageCounts["40-55"],
+      percent: Math.round((ageCounts["40-55"] / total) * 100),
+    },
+    {
+      group: "56+",
+      label: "56+ th (Lansia)",
+      count: ageCounts["56+"],
+      percent: Math.round((ageCounts["56+"] / total) * 100),
+    },
+  ];
+
+  if (ageCounts["UNDER_AGE"] > 0) {
+    ageGroups.push({
+      group: "UNDER_AGE",
+      label: "< 17 th (Perlu Tinjauan)",
+      count: ageCounts["UNDER_AGE"],
+      percent: Math.round((ageCounts["UNDER_AGE"] / total) * 100),
+    });
+  }
+
+  return {
+    total,
+    gender: {
+      male: maleCount,
+      female: femaleCount,
+      malePercent,
+      femalePercent,
+    },
+    ageGroups,
+    dataQuality: {
+      completenessScore: Math.round((completeCount / total) * 100),
+      activeRate: Math.round((activeCount / total) * 100),
+      needsReviewRate: Math.round((needsReviewCount / total) * 100),
+    },
+  };
+}

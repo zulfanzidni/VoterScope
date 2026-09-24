@@ -6,23 +6,10 @@
  * In Next.js 16+, "middleware" was renamed to "proxy".
  */
 
+import { getIronSession } from "iron-session";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getIronSession } from "iron-session";
-import type { SessionOptions } from "iron-session";
-import type { SessionData } from "@/lib/auth/session";
-
-const SESSION_OPTIONS: SessionOptions = {
-  password: process.env.SESSION_SECRET ?? "fallback-dev-only-secret-not-for-production-00",
-  cookieName: "voterscope_session",
-  ttl: 60 * 60 * 8,
-  cookieOptions: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-  },
-};
+import { SESSION_OPTIONS, type SessionData } from "@/lib/auth/session";
 
 // Routes that don't require authentication
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];

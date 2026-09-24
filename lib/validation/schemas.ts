@@ -1,8 +1,13 @@
 /**
  * VoterScope Demo — Zod Validation Schemas
  *
- * Server-side validation for all inputs.
- * Client uses the same schemas via @hookform/resolvers/zod.
+ * Server-side validation for all inputs. This module is the single source of
+ * truth: every route handler parses its request body through a schema here.
+ *
+ * It is deliberately NOT imported by client components. Doing so would ship zod
+ * to the browser, so client forms mirror these rules with react-hook-form's
+ * built-in validators instead (see app/login/LoginForm.tsx). Types are shared
+ * via `import type`, which is erased at build time and carries no runtime cost.
  */
 
 import { z } from "zod";

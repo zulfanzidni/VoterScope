@@ -1,0 +1,60 @@
+# VoterScope Demo — local Docker deployment
+#
+#   docker compose up --build      start
+#   docker compose logs -f app     follow logs
+#   docker compose down            stop
+#
+# Reads credentials from .env (gitignored). No database container: the app talks
+# to hosted Supabase, and prisma/schema.prisma declares a directUrl, so a local
+# Postgres would not serve migrations without reworking the datasource.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: voterscope-demo:local
+    container_name: voterscope-app
+
+    ports:
+      - "3000:3000"
+
+    # Loads DATABASE_URL, DIRECT_URL, SESSION_SECRET, NIK_ENCRYPTION_KEY,
+    # NIK_LOOKUP_SECRET, NEXT_PUBLIC_APP_NAME from .env.
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+
+      # ── Local HTTP ─────────────────────────────────────────────────────────
+      # A production build served over plain http://localhost would otherwise
+      # set the `Secure` cookie flag, which browsers reject for non-HTTPS
+      # origins — login would appear to succeed and then silently not persist.
+      COOKIE_SECURE: "false"
+
+      # Connection pooling. .env deliberately carries no connection_limit —
+      # its value is deployment-shaped. Serverless wants 1 (every cold instance
+      # opens its own pool); this long-lived container wants more, because the
+      # dashboard issues its aggregates in parallel and a pool of one
+      # serialises them. Measured here: 4 parallel counts against a pool of 1
+      # took 2339ms, vs ~200ms per query once overlap is allowed.
+      # 5 leaves headroom for the fan-out and stays well inside Supavisor's
+      # transaction-pooler limits.
+      # See docs/PERFORMANCE_PLAN.md (finding P0-1) and its Step 1 caveat.
+      DATABASE_URL: "${DATABASE_URL}&connection_limit=5"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

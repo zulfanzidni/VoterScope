@@ -4,9 +4,21 @@
  *
  * Verifies credentials with Argon2id, creates iron-session.
  * ALL DATA IS SYNTHETIC DEMO DATA.
+ *
+ * Audit writes are deferred with `after()` from next/server so they run once the
+ * response has been sent. Measured against the live database, an audit INSERT
+ * costs ~270 ms (median), and the login response previously waited for it on
+ * every path — including failures, where it doubled the cost of a 401.
+ *
+ * `after()` is used rather than simply not awaiting the promise: on serverless an
+ * un-awaited promise can be dropped when the instance freezes, which would lose
+ * audit rows silently. `after()` is tracked by the runtime and completes within
+ * the route's max duration. The trade-off is deliberate — a failed audit write is
+ * already non-fatal (see lib/audit), and losing a few ms of durability on a
+ * logging row is worth ~270 ms off every login.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import * as argon2 from "argon2";
 import { prisma } from "@/lib/db/prisma";
 import { getSession } from "@/lib/auth/session";
@@ -95,18 +107,22 @@ export async function POST(request: NextRequest) {
     );
 
     if (!user || !user.isActive) {
-      // Still run hash comparison to prevent timing attacks
+      // Still run hash comparison to prevent timing attacks. This one stays on
+      // the response path — it is the defence against enumerating usernames by
+      // response latency, so it must not be deferred.
       await argon2.hash("dummy-password-timing-prevention");
-      await createAuditLog({
-        userId: null,
-        action: "LOGIN_FAILED",
-        resourceType: "AUTH",
-        resourceId: null,
-        result: "FAILURE",
-        ipAddress: ip,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-        metadata: { reason: user ? "ACCOUNT_INACTIVE" : "USER_NOT_FOUND", username },
-      });
+      after(() =>
+        createAuditLog({
+          userId: null,
+          action: "LOGIN_FAILED",
+          resourceType: "AUTH",
+          resourceId: null,
+          result: "FAILURE",
+          ipAddress: ip,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          metadata: { reason: user ? "ACCOUNT_INACTIVE" : "USER_NOT_FOUND", username },
+        })
+      );
       return GENERIC_ERROR;
     }
 
@@ -122,16 +138,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (!passwordValid) {
-      await createAuditLog({
-        userId: user.id,
-        action: "LOGIN_FAILED",
-        resourceType: "AUTH",
-        resourceId: null,
-        result: "FAILURE",
-        ipAddress: ip,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-        metadata: { reason: "WRONG_PASSWORD" },
-      });
+      after(() =>
+        createAuditLog({
+          userId: user.id,
+          action: "LOGIN_FAILED",
+          resourceType: "AUTH",
+          resourceId: null,
+          result: "FAILURE",
+          ipAddress: ip,
+          userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+          metadata: { reason: "WRONG_PASSWORD" },
+        })
+      );
       return GENERIC_ERROR;
     }
 
@@ -165,19 +183,24 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     session.isLoggedIn = true;
     session.user = sessionUser;
+    // Awaited deliberately: the Set-Cookie header must be on the response, so
+    // this is genuinely on the critical path (unlike the audit write below).
     await session.save();
 
-    // Audit log — SUCCESS
-    await createAuditLog({
-      userId: user.id,
-      action: "LOGIN",
-      resourceType: "AUTH",
-      resourceId: null,
-      result: "SUCCESS",
-      ipAddress: ip,
-      userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
-      metadata: { role: user.role },
-    });
+    // Audit log — SUCCESS. Deferred like the failure paths; `user` is captured
+    // from the closure, so nothing is re-read.
+    after(() =>
+      createAuditLog({
+        userId: user.id,
+        action: "LOGIN",
+        resourceType: "AUTH",
+        resourceId: null,
+        result: "SUCCESS",
+        ipAddress: ip,
+        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+        metadata: { role: user.role },
+      })
+    );
 
     return response;
   } catch (err) {
