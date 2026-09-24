@@ -60,7 +60,7 @@ real and is addressed by Step A.
 | 3 | P1-1, P1-2 SQL aggregation | ✅ Done |
 | 4a | P1-3 recharts code-split | ✅ Done |
 | 4b | P2-2 client-side zod | ✅ Done |
-| 5a | P1-4 loading/Suspense | ⏳ Pending |
+| 5a | P1-4 loading/Suspense | ✅ Done |
 | 5b | P1-5 dashboard caching | ⏸ Deferred — see Decisions |
 | 6 | P2-1, P2-3, P2-5 cleanups | ⏳ Pending |
 
@@ -170,8 +170,69 @@ decision and does not affect the shipped bundle once nothing imports it.
 
 ### Step 5a — perceived speed
 
-`app/dashboard/loading.tsx` plus Suspense boundaries around the heavy panels.
-Static shell and header paint immediately; the aggregates stream in.
+Route-level `loading.tsx` files for all five dashboard routes, a shared skeleton
+module (`components/dashboard/DashboardSkeletons.tsx`), and Suspense boundaries
+inside `app/dashboard/page.tsx`. The static shell and header paint immediately;
+the aggregates stream in.
+
+**The page was restructured into three parts**, which is what makes streaming
+possible:
+
+1. `DashboardHeader` — needs only the session (a cookie decrypt, **no query**), so
+   it renders on the first pass.
+2. `MetricsPanel` — KPI cards + charts, behind `<Suspense>`. Needs the territory
+   name lookup.
+3. `ActivityPanel` — quick actions + audit feed, behind a separate `<Suspense>`.
+   Deliberately reads the raw aggregate promise, **not** the enriched one, so it
+   is not held back by the extra ~212 ms territory round-trip.
+
+The two promises are started with `const core = loadCoreMetrics(...)` (not
+awaited) and `const enriched = core.then(...)`, so both are in flight while the
+header renders.
+
+**Measured streaming behaviour** (`/dashboard`, local production build, reading
+the raw streamed HTML chunk by chunk):
+
+| | cold | warm |
+|---|---|---|
+| First chunk (shell + skeletons) | **281 ms** | **42 ms** |
+| Data present | 4 242 ms | **706 ms** |
+
+Critically, the cold sample proved the shell arrives *before* the data: at 281 ms
+the HTML contained the header and skeletons but `stat-total-voters` was absent
+(`skeleton_before_data: true`). Curl confirms the same shape — `/dashboard` TTFB
+**27 ms** against **488 ms** total, an 18× faster first paint.
+
+**Device-width sweep** (CDP `Emulation.setDeviceMetricsOverride`, per the
+`web-ui-verification` skill — reload required so chart `ResizeObserver` state is
+not stale):
+
+| Width | Mid-load skeleton | Document overflow | Settled |
+|---|---|---|---|
+| 360 px | 46 blocks, widest 332 px | **none** | data present, 0 skeletons |
+| 390 px | 46 blocks, widest 128 px | **none** | data present, 0 skeletons |
+| 412 px | 46 blocks, widest 384 px | **none** | data present, 0 skeletons |
+| 768 px | 46 blocks, widest 485 px | **none** | data present, 0 skeletons |
+
+No horizontal overflow at any width, and every skeleton block fits inside its
+viewport. A vision pass over a 390 px mid-load screenshot confirmed the intended
+state visually: header and greeting painted, grey placeholder blocks below, no
+clipping.
+
+**Accessibility:** the skeleton blocks are `aria-hidden` (decorative) and each
+route emits one `<p role="status" aria-live="polite">` announcement instead
+("Memuat dashboard…", "Memuat data pemilih…", …), so a screen reader hears a single
+loading message rather than a wall of empty divs. Verified present in the streamed
+HTML of all four routes.
+
+**All five routes verified to stream** their shell: `/dashboard`,
+`/dashboard/profile`, `/dashboard/voters`, `/dashboard/audit`, `/dashboard/users`.
+`/dashboard/profile` renders in ~243 ms (a single `findUnique`), so its skeleton is
+visible only briefly — that is the intended outcome, not a missing skeleton.
+
+The other dashboard routes were left as they are: they are `await`-then-render
+client-component wrappers, so their own `loading.tsx` already covers the gap and
+adding inner Suspense would buy nothing.
 
 ### Step 6 — cleanups
 
