@@ -8,11 +8,41 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { loginSchema, type LoginInput } from "@/lib/validation/schemas";
+import type { LoginInput } from "@/lib/validation/schemas";
 
 type FieldName = keyof LoginInput;
+
+// Client-side validation rules, mirroring `loginSchema` in
+// lib/validation/schemas.ts — same constraints, same Indonesian messages.
+//
+// Deliberately hand-written rather than reusing the Zod schema through
+// zodResolver. Importing the schema module here pulled zod (a large dependency)
+// into the login page's client bundle purely to validate two text fields, while
+// the identical validation already runs server-side in the route handler. Zod
+// stays the single source of truth for the server; these rules exist only to
+// give immediate feedback without a round-trip, and are never a security
+// boundary — the API re-validates every request.
+//
+// Keep these in sync with LoginSchema when it changes.
+const USERNAME_RULES = {
+  // `required` is needed in addition to minLength: react-hook-form's minLength
+  // rule skips empty values, so without it an empty username would pass client
+  // validation and hit the network. Zod's min(3) DOES fail on the empty string,
+  // so both rules carry the same message the server would return.
+  required: "Username minimal 3 karakter",
+  minLength: { value: 3, message: "Username minimal 3 karakter" },
+  maxLength: { value: 50, message: "Username maksimal 50 karakter" },
+  pattern: {
+    value: /^[a-zA-Z0-9_]+$/,
+    message: "Username hanya boleh mengandung huruf, angka, dan underscore",
+  },
+} as const;
+
+const PASSWORD_RULES = {
+  required: "Password tidak boleh kosong",
+  maxLength: { value: 128, message: "Password terlalu panjang" },
+} as const;
 
 const DEMO_ACCOUNTS = [
   { label: "Super Admin", username: "superadmin", role: "SUPER_ADMIN" },
@@ -44,7 +74,6 @@ export function LoginForm() {
     setValue,
     formState: { errors },
   } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
   });
 
@@ -117,7 +146,7 @@ export function LoginForm() {
               className={`input-field has-icon-left !pl-10 text-sm ${errors.username ? "error" : ""}`}
               placeholder="Contoh: superadmin"
               disabled={isLoading}
-              {...register("username")}
+              {...register("username", USERNAME_RULES)}
             />
             <svg
               width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
@@ -146,7 +175,7 @@ export function LoginForm() {
               className={`input-field has-icon-left has-icon-right !pl-10 !pr-10 text-sm ${errors.password ? "error" : ""}`}
               placeholder="Masukkan kata sandi"
               disabled={isLoading}
-              {...register("password")}
+              {...register("password", PASSWORD_RULES)}
             />
             <svg
               width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}
