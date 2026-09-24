@@ -13,7 +13,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getUserScope, buildAuthorizedVoterFilter } from "@/lib/authorization";
 import { summarizeDashboardDemographics } from "@/lib/analytics";
-import { DemographicCharts } from "@/components/dashboard/DemographicCharts";
+import { DemographicCharts } from "@/components/dashboard/DemographicChartsLoader";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = {
