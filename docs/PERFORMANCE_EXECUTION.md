@@ -59,7 +59,7 @@ real and is addressed by Step A.
 | 2 | P0-2 audit off login path | ✅ Done |
 | 3 | P1-1, P1-2 SQL aggregation | ✅ Done |
 | 4a | P1-3 recharts code-split | ✅ Done |
-| 4b | P2-2 client-side zod | ⏳ Pending |
+| 4b | P2-2 client-side zod | ✅ Done |
 | 5a | P1-4 loading/Suspense | ⏳ Pending |
 | 5b | P1-5 dashboard caching | ⏸ Deferred — see Decisions |
 | 6 | P2-1, P2-3, P2-5 cleanups | ⏳ Pending |
@@ -125,6 +125,48 @@ the instance can be reclaimed, so no rows were lost.
 `zodResolver` removed from the login form; `react-hook-form`'s built-in rules
 cover the two fields. Server-side `loginSchema.safeParse` remains authoritative —
 client validation is UX only and never a security boundary.
+
+**Measured bundle delta** (initial JS of `/login`, extracted from the prerendered
+`login.html` and summed raw + gzip):
+
+| | scripts | raw | gzip |
+|---|---|---|---|
+| Before (HEAD `bc22450`) | 11 | 1 026 189 B | 289 770 B (**283.0 KB**) |
+| After | 11 | 627 283 B | 196 927 B (**192.3 KB**) |
+| **Change** | | **−398 906 B** | **−92 843 B (−90.7 KB, −32 %)** |
+
+The 435 280 B chunk that contained zod disappeared entirely; `grep` for
+`ZodError`/`zodResolver` across `.next/static/chunks/` now returns nothing.
+
+**Rules are equivalent to the server schema**, verified in a real browser by
+driving the form and counting network calls. All seven cases block client-side
+with `fetch=0`, carrying the same Indonesian message the server would return:
+
+| Input | Result |
+|---|---|
+| empty username, filled password | `Username minimal 3 karakter` |
+| empty both | `Username minimal 3 karakter` + `Password tidak boleh kosong` |
+| 2-char username | `Username minimal 3 karakter` |
+| hyphenated username | `Username hanya boleh mengandung huruf, angka, dan underscore` |
+| 51-char username | `Username maksimal 50 karakter` |
+| valid username, empty password | `Password tidak boleh kosong` |
+| 129-char password | `Password terlalu panjang` |
+
+A valid login still succeeds end-to-end: submitting `superadmin` / `Demo@12345`
+navigates to `/dashboard`, which renders the real data (101 voters, 3 charts, no
+skeletons).
+
+**Bug found and fixed during verification:** the first implementation used only
+`minLength` for the username. react-hook-form's `minLength` rule *skips empty
+values*, whereas Zod's `min(3)` fails on the empty string — so an empty username
+passed client validation and hit the network. Adding `required` (with the same
+message) closed the gap. This is exactly the kind of divergence that makes
+duplicating validation rules risky, and why the rule set is documented as needing
+to track `LoginSchema`.
+
+`@hookform/resolvers` is now imported nowhere in the project. It remains in
+`package.json` deliberately — removing a dependency is a separate, reversible
+decision and does not affect the shipped bundle once nothing imports it.
 
 ### Step 5a — perceived speed
 
